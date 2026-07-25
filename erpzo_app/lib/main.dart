@@ -10,6 +10,7 @@ import 'screens/student/calendar_screen.dart';
 import 'screens/student/assignments_screen.dart';
 import 'screens/student/fee_screen.dart';
 import 'screens/student/teachers_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/student/profile_screen.dart';
 import 'screens/student/teacher_profile_screen.dart';
 import 'screens/student/teacher_chat_screen.dart';
@@ -636,6 +637,7 @@ void main() {
         '/messages': (context) => const MessagesScreen(),
         '/report_card': (context) => const ReportCardScreen(),
         '/exams': (context) => const ExamsScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
       },
     ),
   );

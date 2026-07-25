@@ -18,6 +18,7 @@ const staffRoutes = require('./routes/staffRoutes');
 const parentRoutes = require('./routes/parentRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const userRoutes = require('./routes/userRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const { verifyToken } = require('./middleware/authMiddleware');
 const { resolveTenant } = require('./middleware/tenantMiddleware');
 const { dbBreaker } = require('./prismaClient');
@@ -92,6 +93,7 @@ app.use('/api/staff', verifyToken, resolveTenant, staffRoutes);
 app.use('/api/parents', verifyToken, resolveTenant, parentRoutes);
 app.use('/api/audit-logs', verifyToken, resolveTenant, auditLogRoutes);
 app.use('/api/users', verifyToken, resolveTenant, userRoutes);
+app.use('/api/notifications', verifyToken, resolveTenant, notificationRoutes);
 
 // ── Health check ──
 app.get('/api/health', (req, res) => {

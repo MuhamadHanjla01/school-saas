@@ -1,8 +1,12 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SocketService {
   static final SocketService _instance = SocketService._internal();
   IO.Socket? socket;
+  
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   // Use your live Render backend URL
   static const String _serverUrl = 'https://school-backend-your-render-url.onrender.com';
@@ -13,14 +17,24 @@ class SocketService {
 
   SocketService._internal();
 
-  void initSocket() {
+  Future<void> initSocket() async {
     if (socket != null && socket!.connected) return;
 
-    // Use a placeholder or the actual backend URL here
-    // In a real scenario, you might want to fetch this from an environment variable or config
+    // Request notification permissions
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+
+    // Initialize local notifications
+    const AndroidInitializationSettings initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initSettings = InitializationSettings(android: initAndroid);
+    await _localNotifications.initialize(
+      settings: initSettings,
+    );
+
     socket = IO.io(_serverUrl, IO.OptionBuilder()
-      .setTransports(['websocket']) // for Flutter or Web
-      .disableAutoConnect()  // disable auto-connection
+      .setTransports(['websocket'])
+      .disableAutoConnect()
       .build()
     );
 
@@ -37,6 +51,33 @@ class SocketService {
     socket!.onError((err) {
       print('Socket error: $err');
     });
+
+    // Listen for new notices specifically to push local notification
+    socket!.on('new_notice', (data) {
+      _showLocalNotification(
+        title: 'New Notice: ${data['title'] ?? 'Important'}',
+        body: data['content'] ?? 'Check the dashboard for details.',
+      );
+    });
+  }
+
+  Future<void> _showLocalNotification({required String title, required String body}) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'erpzo_channel', 
+      'ERPZO Notifications',
+      channelDescription: 'Real-time notifications for ERPZO',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker'
+    );
+    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+    
+    await _localNotifications.show(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 100000, 
+      title: title, 
+      body: body, 
+      notificationDetails: platformDetails,
+    );
   }
 
   void on(String event, Function(dynamic) callback) {
@@ -55,3 +96,4 @@ class SocketService {
     socket?.disconnect();
   }
 }
+
