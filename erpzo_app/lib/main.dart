@@ -4,6 +4,7 @@ import 'api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'screens/student/dashboard_screen.dart';
+import 'services/update_service.dart';
 import 'screens/student/class_routine_screen.dart';
 import 'screens/student/calendar_screen.dart';
 import 'screens/student/assignments_screen.dart';
@@ -39,6 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    UpdateService.checkForUpdates(context);
     _checkLoginStatus();
   }
 
