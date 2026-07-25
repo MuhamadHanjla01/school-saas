@@ -6,7 +6,7 @@ const { dbCall } = require('../prismaClient');
 const generateAccessToken = (user, school = null) => {
   return jwt.sign(
     { userId: user.id, role: user.role, schoolId: user.schoolId, schoolName: school?.name || 'iNiLabs School' },
-    process.env.JWT_ACCESS_SECRET,
+    process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
 };
@@ -14,7 +14,7 @@ const generateAccessToken = (user, school = null) => {
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { userId: user.id, schoolId: user.schoolId },
-    process.env.JWT_REFRESH_SECRET,
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
 };
@@ -85,7 +85,7 @@ exports.refresh = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
     } catch (e) {
       return res.status(403).json({ error: 'Invalid refresh token' });
     }
