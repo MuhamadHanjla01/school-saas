@@ -20,9 +20,9 @@ export default function AssignmentsView({ dark }) {
     const fetchInitial = async () => {
       try {
         const [resClasses, resSubjects, resTeachers] = await Promise.all([
-          axios.get('http://localhost:3000/api/classes'),
-          axios.get('http://localhost:3000/api/subjects'),
-          axios.get('http://localhost:3000/api/teachers')
+          axios.get('https://school-backend-70ny.onrender.com/api/classes'),
+          axios.get('https://school-backend-70ny.onrender.com/api/subjects'),
+          axios.get('https://school-backend-70ny.onrender.com/api/teachers')
         ]);
         setClasses(resClasses.data.classes || []);
         setSubjects(resSubjects.data.subjects || []);
@@ -37,7 +37,7 @@ export default function AssignmentsView({ dark }) {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:3000/api/assignments');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/assignments');
       setAssignments(res.data.assignments || []);
     } catch (err) {
       console.error('Failed to fetch assignments', err);
@@ -60,12 +60,12 @@ export default function AssignmentsView({ dark }) {
     try {
       const token = localStorage.getItem('token');
       if (form.id) {
-        await axios.put(`http://localhost:3000/api/assignments/${form.id}`, form, {
+        await axios.put(`https://school-backend-70ny.onrender.com/api/assignments/${form.id}`, form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setToast({ message: 'Assignment updated successfully', type: 'success' });
       } else {
-        await axios.post('http://localhost:3000/api/assignments', form, {
+        await axios.post('https://school-backend-70ny.onrender.com/api/assignments', form, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setToast({ message: 'Assignment created successfully', type: 'success' });
@@ -81,7 +81,7 @@ export default function AssignmentsView({ dark }) {
     if (!confirm('Are you sure you want to delete this assignment?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/assignments/${id}`, {
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/assignments/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Assignment deleted', type: 'success' });

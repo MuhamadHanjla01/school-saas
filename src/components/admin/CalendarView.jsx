@@ -13,7 +13,7 @@ export default function CalendarView({ dark }) {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:3000/api/school/events');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/school/events');
       setEvents(res.data.events || []);
     } catch (err) {
       console.error('Failed to fetch events', err);
@@ -30,7 +30,7 @@ export default function CalendarView({ dark }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/school/events', form, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/events', form, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Event added successfully', type: 'success' });

@@ -100,7 +100,7 @@ export default function ReportsView({ dark }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/dashboard-stats');
+        const res = await axios.get('https://school-backend-70ny.onrender.com/api/dashboard-stats');
         setStats(res.data);
       } catch (err) {
         console.error('Failed to fetch stats', err);

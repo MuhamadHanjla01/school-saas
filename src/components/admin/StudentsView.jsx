@@ -82,7 +82,7 @@ export default function StudentsView({ dark }) {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/students');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/students');
       const formatted = res.data.students.map(s => ({
         ...s,
         id: s.studentId,
@@ -101,7 +101,7 @@ export default function StudentsView({ dark }) {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/classes');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
       setClasses(res.data.classes || []);
     } catch (err) {
       console.error('Failed to fetch classes', err);
@@ -118,7 +118,7 @@ export default function StudentsView({ dark }) {
     if (!resetForm.newPassword) return;
     try {
       const dbId = resetPasswordStudent.id_db || resetPasswordStudent.id;
-      const res = await axios.post(`http://localhost:3000/api/students/${dbId}/reset-password`, {
+      const res = await axios.post(`https://school-backend-70ny.onrender.com/api/students/${dbId}/reset-password`, {
         newPassword: resetForm.newPassword,
         oldPassword: resetForm.oldPassword
       });
@@ -135,7 +135,7 @@ export default function StudentsView({ dark }) {
     e.preventDefault();
     if (!promoteClassId) return;
     try {
-      await axios.put(`http://localhost:3000/api/students/${promoteStudent.id_db || promoteStudent.id}`, { classId: promoteClassId });
+      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${promoteStudent.id_db || promoteStudent.id}`, { classId: promoteClassId });
       setToast({ message: `Student promoted successfully`, type: 'success' });
       setPromoteStudent(null);
       setPromoteClassId('');
@@ -160,7 +160,7 @@ export default function StudentsView({ dark }) {
 
     // Fetch details
     try {
-      const res = await axios.get(`http://localhost:3000/api/students/${dbId}`);
+      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/students/${dbId}`);
       setExpandedRows(prev => ({ ...prev, [dbId]: { loading: false, data: res.data.student } }));
     } catch (err) {
       console.error(err);

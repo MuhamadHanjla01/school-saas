@@ -15,7 +15,7 @@ export default function CommunicationView({ dark }) {
   const fetchMessages = async (userId = '') => {
     try {
       setLoading(true);
-      const url = userId ? `http://localhost:3000/api/school/messages?withUser=${userId}` : 'http://localhost:3000/api/school/messages';
+      const url = userId ? `https://school-backend-70ny.onrender.com/api/school/messages?withUser=${userId}` : 'https://school-backend-70ny.onrender.com/api/school/messages';
       const token = localStorage.getItem('token');
       const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
       setMessages(res.data.messages.reverse() || []);
@@ -30,8 +30,8 @@ export default function CommunicationView({ dark }) {
   const fetchUsers = async () => {
     try {
       const [resT, resS] = await Promise.all([
-        axios.get('http://localhost:3000/api/teachers'),
-        axios.get('http://localhost:3000/api/students')
+        axios.get('https://school-backend-70ny.onrender.com/api/teachers'),
+        axios.get('https://school-backend-70ny.onrender.com/api/students')
       ]);
       const formatted = [
         ...(resT.data.teachers || []).map(t => ({ id: t.userId, name: t.name, role: 'Teacher' })),
@@ -61,7 +61,7 @@ export default function CommunicationView({ dark }) {
     if (!selectedUserId || !content.trim()) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/school/messages', { receiverId: selectedUserId, content }, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/messages', { receiverId: selectedUserId, content }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContent('');

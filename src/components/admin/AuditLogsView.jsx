@@ -11,7 +11,7 @@ export default function AuditLogsView({ dark }) {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/audit-logs');
+        const res = await axios.get('https://school-backend-70ny.onrender.com/api/audit-logs');
         setLogs(res.data.logs || []);
       } catch (err) {
         console.error('Failed to fetch audit logs', err);

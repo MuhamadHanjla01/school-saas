@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
           originalRequest._retry = true;
           try {
             // Attempt to refresh
-            const res = await axios.post('http://localhost:3000/api/auth/refresh', {}, {
+            const res = await axios.post('https://school-backend-70ny.onrender.com/api/auth/refresh', {}, {
               withCredentials: true
             });
             const { accessToken: newAccessToken } = res.data;
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await axios.post('http://localhost:3000/api/auth/refresh', {}, {
+        const res = await axios.post('https://school-backend-70ny.onrender.com/api/auth/refresh', {}, {
           withCredentials: true
         });
         setAccessToken(res.data.accessToken);
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const res = await axios.post('http://localhost:3000/api/auth/login', { email, password, clientType: 'web' }, {
+    const res = await axios.post('https://school-backend-70ny.onrender.com/api/auth/login', { email, password, clientType: 'web' }, {
       withCredentials: true
     });
     setAccessToken(res.data.accessToken);
@@ -101,14 +101,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('https://school-backend-70ny.onrender.com/api/auth/logout', {}, { withCredentials: true });
     } catch (e) {}
     setUser(null);
     setAccessToken(null);
   };
 
   const forgotPassword = async (email) => {
-    const res = await axios.post('http://localhost:3000/api/auth/forgot-password', { email });
+    const res = await axios.post('https://school-backend-70ny.onrender.com/api/auth/forgot-password', { email });
     return res.data;
   };
 

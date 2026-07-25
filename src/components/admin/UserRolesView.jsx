@@ -17,7 +17,7 @@ export default function UserRolesView({ dark }) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/users');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/users');
       setUsers(res.data.users || []);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -36,14 +36,14 @@ export default function UserRolesView({ dark }) {
     try {
       if (form.id) {
         // In real app, separate password change from profile update
-        await axios.put(`http://localhost:3000/api/users/${form.id}`, {
+        await axios.put(`https://school-backend-70ny.onrender.com/api/users/${form.id}`, {
           username: form.username,
           email: form.email,
           role: form.role
         });
         setToast({ message: 'User updated successfully', type: 'success' });
       } else {
-        await axios.post('http://localhost:3000/api/users', form);
+        await axios.post('https://school-backend-70ny.onrender.com/api/users', form);
         setToast({ message: 'User created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -57,7 +57,7 @@ export default function UserRolesView({ dark }) {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`http://localhost:3000/api/users/${id}`);
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/users/${id}`);
       setToast({ message: 'User deleted', type: 'success' });
       fetchUsers();
     } catch (err) {

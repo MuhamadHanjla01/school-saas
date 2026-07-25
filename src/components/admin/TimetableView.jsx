@@ -28,8 +28,8 @@ export default function TimetableView({ dark }) {
     const fetchInitial = async () => {
       try {
         const [resClasses, resTeachers] = await Promise.all([
-          axios.get('http://localhost:3000/api/classes'),
-          axios.get('http://localhost:3000/api/teachers')
+          axios.get('https://school-backend-70ny.onrender.com/api/classes'),
+          axios.get('https://school-backend-70ny.onrender.com/api/teachers')
         ]);
         setClasses(resClasses.data.classes);
         setTeachers(resTeachers.data.teachers);
@@ -47,7 +47,7 @@ export default function TimetableView({ dark }) {
     if (!classId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3000/api/timetable?classId=${classId}`);
+      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/timetable?classId=${classId}`);
       const timetable = res.data.timetable || {};
       
       const periodSet = new Set();
@@ -86,7 +86,7 @@ export default function TimetableView({ dark }) {
       // But we need a subjectId. Let's assume we fetch all subjects or class.subjects if they had IDs.
       // For now, if we don't have a /api/subjects route, we'll need to create it or just assume it exists.
       // Let's call /api/subjects
-      const res = await axios.get('http://localhost:3000/api/subjects').catch(() => ({ data: { subjects: [] }}));
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/subjects').catch(() => ({ data: { subjects: [] }}));
       setSubjects(res.data.subjects || []);
     } catch (err) {
       console.error(err);
@@ -98,7 +98,7 @@ export default function TimetableView({ dark }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/timetable', { ...slotForm, classId: selectedClassId }, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/timetable', { ...slotForm, classId: selectedClassId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Timetable slot added', type: 'success' });
@@ -113,7 +113,7 @@ export default function TimetableView({ dark }) {
     if (!confirm('Delete this timetable slot?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/timetable/${id}`, {
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/timetable/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Slot deleted', type: 'success' });

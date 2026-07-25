@@ -20,7 +20,7 @@ export default function FeesView({ dark }) {
   const fetchSummary = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:3000/api/fees/summary');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/fees/summary');
       setData(res.data);
     } catch (err) {
       console.error('Failed to fetch fees', err);
@@ -37,7 +37,7 @@ export default function FeesView({ dark }) {
     setModalType('addFee');
     setFeeForm({ name: '', amount: '', dueDate: '', classId: '' });
     try {
-      const res = await axios.get('http://localhost:3000/api/classes');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
       setClasses(res.data.classes);
     } catch (err) {
       console.error(err);
@@ -49,8 +49,8 @@ export default function FeesView({ dark }) {
     setPaymentForm({ studentId: '', feeId: '', amount: '', status: 'Paid' });
     try {
       const [resFees, resStudents] = await Promise.all([
-        axios.get('http://localhost:3000/api/fees'),
-        axios.get('http://localhost:3000/api/students')
+        axios.get('https://school-backend-70ny.onrender.com/api/fees'),
+        axios.get('https://school-backend-70ny.onrender.com/api/students')
       ]);
       setFeesList(resFees.data.fees);
       setStudents(resStudents.data.students);
@@ -63,7 +63,7 @@ export default function FeesView({ dark }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/fees', feeForm, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/fees', feeForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Fee structure added', type: 'success' });
@@ -78,7 +78,7 @@ export default function FeesView({ dark }) {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/fees/payments', paymentForm, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/fees/payments', paymentForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Payment recorded', type: 'success' });

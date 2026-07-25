@@ -14,7 +14,7 @@ export default function ClassesView({ dark }) {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/classes');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
       setClasses(res.data.classes);
     } catch (err) {
       console.error('Failed to fetch classes', err);
@@ -23,7 +23,7 @@ export default function ClassesView({ dark }) {
 
   const fetchTeachers = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/teachers');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
       setTeachers(res.data.teachers);
     } catch (err) {
       console.error('Failed to fetch teachers', err);
@@ -57,10 +57,10 @@ export default function ClassesView({ dark }) {
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
       if (editingClass) {
-        await axios.put(`http://localhost:3000/api/classes/${editingClass.id}`, formData, config);
+        await axios.put(`https://school-backend-70ny.onrender.com/api/classes/${editingClass.id}`, formData, config);
         setToast({ message: 'Class updated successfully', type: 'success' });
       } else {
-        await axios.post('http://localhost:3000/api/classes', formData, config);
+        await axios.post('https://school-backend-70ny.onrender.com/api/classes', formData, config);
         setToast({ message: 'Class created successfully', type: 'success' });
       }
       setModalOpen(false);

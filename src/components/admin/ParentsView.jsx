@@ -20,7 +20,7 @@ export default function ParentsView({ dark }) {
   const fetchParents = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/parents');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/parents');
       setParents(res.data.parents || []);
     } catch (err) {
       console.error('Failed to fetch parents', err);
@@ -38,10 +38,10 @@ export default function ParentsView({ dark }) {
     e.preventDefault();
     try {
       if (form.id) {
-        await axios.put(`http://localhost:3000/api/parents/${form.id}`, form);
+        await axios.put(`https://school-backend-70ny.onrender.com/api/parents/${form.id}`, form);
         setToast({ message: 'Parent updated successfully', type: 'success' });
       } else {
-        await axios.post('http://localhost:3000/api/parents', form);
+        await axios.post('https://school-backend-70ny.onrender.com/api/parents', form);
         setToast({ message: 'Parent created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -55,7 +55,7 @@ export default function ParentsView({ dark }) {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this parent record?')) return;
     try {
-      await axios.delete(`http://localhost:3000/api/parents/${id}`);
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/parents/${id}`);
       setToast({ message: 'Parent deleted', type: 'success' });
       fetchParents();
     } catch (err) {

@@ -17,7 +17,7 @@ export default function NoticesView({ dark }) {
   const fetchNotices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:3000/api/school/notices');
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/school/notices');
       setNotices(res.data.notices || []);
     } catch (err) {
       console.error('Failed to fetch notices', err);
@@ -36,7 +36,7 @@ export default function NoticesView({ dark }) {
     if (!confirm('Delete this notice?')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/school/notices/${noticeId}`, {
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/school/notices/${noticeId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Notice deleted', type: 'success' });
@@ -55,7 +55,7 @@ export default function NoticesView({ dark }) {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }, {
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Notice posted', type: 'success' });
