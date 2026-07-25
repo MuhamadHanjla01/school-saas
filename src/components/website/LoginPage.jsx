@@ -131,6 +131,13 @@ export default function LoginPage() {
                   {successMsg}
                 </div>
               )}
+              
+              <div className="bg-primary-container/10 border border-primary-container/20 p-4 rounded-xl text-sm text-outline mb-6">
+                <p className="font-semibold text-primary-container mb-1">Demo Credentials:</p>
+                <p>Admin: admin@erpzo.com / admin123</p>
+                <p>Teacher: teacher@erpzo.com / teacher123</p>
+                <p>Student: student@erpzo.com / student123</p>
+              </div>
               {/* Email Input */}
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline/50 text-[20px]">
