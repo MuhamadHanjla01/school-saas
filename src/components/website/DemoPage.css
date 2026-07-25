@@ -1,0 +1,15 @@
+.demo-page {
+  /* Scoped specific styles for the demo page */
+}
+
+.demo-page .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.demo-page .bg-pattern {
+  background-image: radial-gradient(var(--primary-container) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.05;
+}

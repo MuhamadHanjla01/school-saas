@@ -1,0 +1,81 @@
+/* ── CTA Section ── */
+.cta {
+  padding: 96px 0;
+  background: rgba(0, 194, 168, 0.1);
+}
+
+.cta__inner {
+  text-align: center;
+  max-width: 800px;
+}
+
+.cta__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: 24px;
+}
+
+.cta__subtitle {
+  color: var(--on-surface-variant);
+  margin-bottom: 40px;
+}
+
+.cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.cta__btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 16px 48px;
+  border-radius: var(--radius-full);
+  transition: var(--transition-standard);
+  box-shadow: var(--shadow-primary);
+}
+
+.cta__btn-primary:hover {
+  box-shadow: 0 12px 40px rgba(0, 107, 92, 0.3);
+  transform: translateY(-2px);
+}
+
+.cta__btn-primary:active {
+  transform: scale(0.98);
+}
+
+.cta__btn-secondary {
+  background: #ffffff;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  padding: 16px 48px;
+  border-radius: var(--radius-full);
+  transition: var(--transition-standard);
+}
+
+.cta__btn-secondary:hover {
+  background: rgba(0, 107, 92, 0.05);
+  transform: translateY(-2px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .cta {
+    padding: 64px 0;
+  }
+
+  .cta__title {
+    font-size: 24px;
+  }
+
+  .cta__actions {
+    flex-direction: column;
+  }
+
+  .cta__btn-primary,
+  .cta__btn-secondary {
+    width: 100%;
+  }
+}

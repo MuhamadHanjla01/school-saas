@@ -1,0 +1,307 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   EduFlow ERP — Design System & Global Styles
+   ======================================== */
+
+/* ── CSS Custom Properties (Design Tokens) ── */
+:root {
+  /* Primary Palette */
+  --primary: #006b5c;
+  --primary-container: #00c2a8;
+  --on-primary: #ffffff;
+  --on-primary-container: #00493e;
+  --primary-fixed: #65fade;
+  --primary-fixed-dim: #41ddc2;
+  --on-primary-fixed: #00201b;
+  --on-primary-fixed-variant: #005045;
+
+  /* Secondary Palette */
+  --secondary: #0060ac;
+  --secondary-container: #68abff;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #003e73;
+  --secondary-fixed: #d4e3ff;
+  --secondary-fixed-dim: #a4c9ff;
+  --on-secondary-fixed: #001c39;
+  --on-secondary-fixed-variant: #004883;
+
+  /* Tertiary Palette */
+  --tertiary: #9d4224;
+  --tertiary-container: #ff8d69;
+  --on-tertiary: #ffffff;
+  --on-tertiary-container: #752509;
+  --tertiary-fixed: #ffdbd0;
+  --tertiary-fixed-dim: #ffb59e;
+  --on-tertiary-fixed: #3a0b00;
+  --on-tertiary-fixed-variant: #7e2c0f;
+
+  /* Error */
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error: #ffffff;
+  --on-error-container: #93000a;
+
+  /* Surface / Neutral */
+  --surface: #f9f9fc;
+  --surface-dim: #dadadc;
+  --surface-bright: #f9f9fc;
+  --surface-variant: #e2e2e5;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f3f3f6;
+  --surface-container: #eeeef0;
+  --surface-container-high: #e8e8ea;
+  --surface-container-highest: #e2e2e5;
+  --surface-tint: #006b5c;
+
+  --on-surface: #1a1c1e;
+  --on-surface-variant: #3c4a46;
+  --on-background: #1a1c1e;
+  --background: #f9f9fc;
+  --outline: #6c7a76;
+  --outline-variant: #bbcac4;
+  --inverse-surface: #2f3133;
+  --inverse-on-surface: #f0f0f3;
+  --inverse-primary: #41ddc2;
+
+  /* Spacing */
+  --container-padding-desk: 40px;
+  --container-padding-mob: 20px;
+  --card-gap: 24px;
+  --gutter: 16px;
+  --base: 8px;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-card: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-soft: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0px 8px 30px rgba(0, 0, 0, 0.1);
+  --shadow-primary: 0px 8px 24px rgba(0, 107, 92, 0.2);
+
+  /* Transitions */
+  --transition-standard: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+
+/* ── Reset & Base ── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--on-surface);
+  background-color: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ── Typography ── */
+.text-display {
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.text-display-mobile {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+}
+
+.text-headline-lg {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+.text-headline-md {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.text-body-lg {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.text-body-md {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.text-label-lg {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+
+.text-label-sm {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+/* ── Layout ── */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--container-padding-desk);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--container-padding-mob);
+  }
+}
+
+/* ── Glass Effect ── */
+.glass-nav {
+  background: rgba(249, 249, 252, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ── Shadows ── */
+.soft-shadow {
+  box-shadow: var(--shadow-soft);
+}
+
+/* ── Animations ── */
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+.floating-ui {
+  animation: floating 6s ease-in-out infinite;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scale-in {
+  animation: scaleIn 0.5s ease-out both;
+}
+
+/* ── Transition Utility ── */
+.transition-standard {
+  transition: var(--transition-standard);
+}
+
+.transition-fast {
+  transition: var(--transition-fast);
+}
+
+/* ── Material Icon Sizing Helper ── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-container);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+}

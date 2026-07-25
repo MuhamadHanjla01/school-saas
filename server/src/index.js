@@ -1,0 +1,99 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const compression = require('compression');
+const cookieParser = require('cookie-parser');
+const authRoutes = require('./routes/authRoutes');
+const studentRoutes = require('./routes/studentRoutes');
+const teacherRoutes = require('./routes/teacherRoutes');
+const classRoutes = require('./routes/classRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const examRoutes = require('./routes/examRoutes');
+const feeRoutes = require('./routes/feeRoutes');
+const communicationRoutes = require('./routes/communicationRoutes');
+const timetableRoutes = require('./routes/timetableRoutes');
+const subjectRoutes = require('./routes/subjectRoutes');
+const staffRoutes = require('./routes/staffRoutes');
+const parentRoutes = require('./routes/parentRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
+const userRoutes = require('./routes/userRoutes');
+const { verifyToken } = require('./middleware/authMiddleware');
+const { resolveTenant } = require('./middleware/tenantMiddleware');
+const { dbBreaker } = require('./prismaClient');
+const { cache } = require('./responseCache');
+
+const app = express();
+
+// ── Global request timeout (10s) ──
+app.use((req, res, next) => {
+  req.setTimeout(10_000, () => {
+    if (!res.headersSent) {
+      res.status(504).json({ error: 'Request timed out' });
+    }
+  });
+  next();
+});
+
+// Enable gzip/deflate compression
+app.use(compression({
+  threshold: 512,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
+
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+app.use(express.json());
+app.use(cookieParser());
+
+// ── Auth routes (no tenant required) ──
+app.use('/api/auth', authRoutes);
+
+// ── Protected routes: verify token + resolve tenant ──
+app.use('/api/students', verifyToken, resolveTenant, studentRoutes);
+app.use('/api/teachers', verifyToken, resolveTenant, teacherRoutes);
+app.use('/api/classes', verifyToken, resolveTenant, classRoutes);
+app.use('/api/attendance', verifyToken, resolveTenant, attendanceRoutes);
+app.use('/api/assignments', verifyToken, resolveTenant, assignmentRoutes);
+app.use('/api/exams', verifyToken, resolveTenant, examRoutes);
+app.use('/api/fees', verifyToken, resolveTenant, feeRoutes);
+app.use('/api/school', verifyToken, resolveTenant, communicationRoutes);
+app.use('/api/timetable', verifyToken, resolveTenant, timetableRoutes);
+app.use('/api/subjects', verifyToken, resolveTenant, subjectRoutes);
+app.use('/api/staff', verifyToken, resolveTenant, staffRoutes);
+app.use('/api/parents', verifyToken, resolveTenant, parentRoutes);
+app.use('/api/audit-logs', verifyToken, resolveTenant, auditLogRoutes);
+app.use('/api/users', verifyToken, resolveTenant, userRoutes);
+
+// ── Health check ──
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.get('/api/health/circuits', (req, res) => {
+  res.json({ circuits: [dbBreaker.getStatus()], timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health/cache', (req, res) => {
+  res.json({ cache: cache.getStats(), timestamp: new Date().toISOString() });
+});
+
+app.post('/api/admin/cache/invalidate', (req, res) => {
+  const { tag } = req.body;
+  if (tag) {
+    const count = cache.invalidateByTag(tag);
+    return res.json({ message: `Invalidated ${count} entries for tag "${tag}"` });
+  }
+  const count = cache.invalidateAll();
+  res.json({ message: `Invalidated all ${count} entries` });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});

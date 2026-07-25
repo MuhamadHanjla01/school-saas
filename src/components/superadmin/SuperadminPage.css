@@ -1,0 +1,389 @@
+/* ========================================
+   SuperAdmin Dashboard — Enhanced Styles
+   ======================================== */
+
+/* ── Card Shadow ── */
+.sa-card {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 6px 24px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 16px;
+}
+.sa-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 4px 12px rgba(0, 107, 92, 0.08),
+    0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Scrollbar ── */
+.sa-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.sa-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sa-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4d4d8, #c4c4c8);
+  border-radius: 10px;
+}
+.sa-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #b0b0b4, #a0a0a4);
+}
+
+/* ── Chart Container ── */
+.sa-chart-container {
+  position: relative;
+  height: 240px;
+  width: 100%;
+}
+
+/* ── Revenue Line Animation ── */
+.sa-revenue-line-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: sa-dash 2.5s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+@keyframes sa-dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Collapsible Submenu ── */
+.sa-submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease-in;
+  opacity: 0;
+}
+.sa-menu-expanded .sa-submenu {
+  max-height: 500px;
+  opacity: 1;
+}
+.sa-rotate-icon {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sa-menu-expanded .sa-rotate-icon {
+  transform: rotate(90deg);
+}
+
+/* ── Modal Overlay ── */
+.sa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: sa-fadeIn 0.25s ease-out;
+}
+.sa-modal-panel {
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  padding: 32px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.03),
+    0 20px 60px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+  animation: sa-scaleUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes sa-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sa-scaleUp {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Mobile Drawer ── */
+.sa-mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: sa-fadeIn 0.2s ease-out;
+}
+.sa-mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 288px;
+  z-index: 91;
+  background: linear-gradient(180deg, #f7f7fa 0%, #ededf0 100%);
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.12);
+  animation: sa-slideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-y: auto;
+}
+@keyframes sa-slideIn {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── Dark Mode Overrides ── */
+.dark .sa-card {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 6px 24px rgba(0, 0, 0, 0.3);
+}
+.dark .sa-card:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 107, 92, 0.15),
+    0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.dark .sa-modal-panel {
+  background: rgba(47, 49, 51, 0.97);
+  border-color: rgba(108, 122, 118, 0.3);
+}
+.dark .sa-mobile-drawer {
+  background: linear-gradient(180deg, #2f3133 0%, #262829 100%);
+}
+.dark .sa-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #5a6864, #4a5854);
+}
+.dark .sa-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6c7a76, #5a6864);
+}
+
+/* ── KPI Stat Pulse ── */
+@keyframes sa-pulse-ring {
+  0%   { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.sa-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: sa-pulse-ring 2s ease-out infinite;
+}
+
+/* ── Toast Notification ── */
+.sa-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  padding: 14px 24px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: sa-toastIn 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+             sa-toastOut 0.35s ease-in 2.65s forwards;
+}
+.sa-toast--success {
+  background: linear-gradient(135deg, #006b5c 0%, #00897b 100%);
+}
+.sa-toast--error {
+  background: linear-gradient(135deg, #ba1a1a 0%, #d32f2f 100%);
+}
+@keyframes sa-toastIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sa-toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(16px) scale(0.95); }
+}
+
+/* ── Form Field ── */
+.sa-input {
+  width: 100%;
+  padding: 11px 16px;
+  border: 1.5px solid #e2e2e5;
+  border-radius: 14px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  color: #1a1c1e;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              background-color 0.2s ease;
+}
+.sa-input:hover {
+  border-color: #ccc;
+  background: #fff;
+}
+.sa-input:focus {
+  border-color: #006b5c;
+  background: #fff;
+  box-shadow: 0 0 0 3.5px rgba(0, 107, 92, 0.1);
+}
+.sa-input::placeholder {
+  color: #9ca3a1;
+}
+.dark .sa-input {
+  background: #1e2022;
+  border-color: #4a5854;
+  color: #f0f0f3;
+}
+.dark .sa-input:hover {
+  border-color: #6c7a76;
+  background: #262829;
+}
+.dark .sa-input:focus {
+  border-color: #41ddc2;
+  background: #1a1c1e;
+  box-shadow: 0 0 0 3.5px rgba(65, 221, 194, 0.12);
+}
+
+/* ── Select Field ── */
+.sa-select {
+  appearance: none;
+  background-color: #f3f3f6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20' stroke='%236c7a76'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 18px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 8px 36px 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  color: #1a1c1e;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.sa-select:hover {
+  background-color: #eaeaed;
+  border-color: #d4d4d8;
+}
+.sa-select:focus {
+  border-color: #006b5c;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 107, 92, 0.12);
+}
+.dark .sa-select {
+  background-color: #2a2d2f;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20' stroke='%238b9896'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  color: #f0f0f3;
+}
+.dark .sa-select:hover {
+  background-color: #3c4a46;
+  border-color: #5a6864;
+}
+.dark .sa-select:focus {
+  background-color: #1a1c1e;
+  border-color: #41ddc2;
+  box-shadow: 0 0 0 3px rgba(65, 221, 194, 0.12);
+}
+
+/* ── Table row animation ── */
+@keyframes sa-rowFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sa-row-enter {
+  animation: sa-rowFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Sidebar active indicator ── */
+.sa-sidebar-active {
+  position: relative;
+}
+.sa-sidebar-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #006b5c, #00897b);
+}
+
+/* ── Gradient Accent Utility ── */
+.sa-gradient-primary {
+  background: linear-gradient(135deg, #006b5c 0%, #00897b 100%);
+}
+
+/* ── KPI Icon Glow ── */
+.sa-icon-glow {
+  position: relative;
+}
+.sa-icon-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0.3;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+/* ── Shimmer effect for loading states ── */
+@keyframes sa-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sa-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    rgba(0, 107, 92, 0.06) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: sa-shimmer 2s ease-in-out infinite;
+}
+
+/* ── Badge pill hover ── */
+.sa-badge-pill {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sa-badge-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Table hover row highlight ── */
+.sa-table-row {
+  transition: background-color 0.15s ease;
+}
+.sa-table-row:hover {
+  background-color: rgba(0, 107, 92, 0.03);
+}
+.dark .sa-table-row:hover {
+  background-color: rgba(65, 221, 194, 0.04);
+}
+
+/* ── Smooth section appear ── */
+@keyframes sa-sectionAppear {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sa-section-animate {
+  animation: sa-sectionAppear 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Button press effect ── */
+.sa-btn-press:active {
+  transform: scale(0.97);
+}

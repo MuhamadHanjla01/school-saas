@@ -1,0 +1,118 @@
+/* ── Features ── */
+.features {
+  background: var(--surface-container-low);
+  padding: 128px 0;
+}
+
+.features__header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.features__title {
+  color: var(--on-surface);
+  margin-bottom: 16px;
+}
+
+.features__subtitle {
+  color: var(--on-surface-variant);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.features__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--card-gap);
+}
+
+/* Feature Card */
+.feature-card {
+  background: var(--surface-container-lowest);
+  padding: 32px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid transparent;
+  transition: var(--transition-standard);
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.feature-card--visible {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0, 194, 168, 0.2);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Icon */
+.feature-card__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  transition: var(--transition-standard);
+}
+
+.feature-card__icon--primary {
+  background: rgba(0, 194, 168, 0.1);
+  color: var(--primary-container);
+}
+
+.feature-card:hover .feature-card__icon--primary {
+  background: var(--primary-container);
+  color: #ffffff;
+}
+
+.feature-card__icon--secondary {
+  background: rgba(104, 171, 255, 0.1);
+  color: var(--secondary);
+}
+
+.feature-card:hover .feature-card__icon--secondary {
+  background: var(--secondary);
+  color: #ffffff;
+}
+
+.feature-card__icon--tertiary {
+  background: rgba(255, 141, 105, 0.1);
+  color: var(--tertiary);
+}
+
+.feature-card:hover .feature-card__icon--tertiary {
+  background: var(--tertiary);
+  color: #ffffff;
+}
+
+/* Text */
+.feature-card__title {
+  color: var(--on-surface);
+  margin-bottom: 8px;
+}
+
+.feature-card__desc {
+  color: var(--on-surface-variant);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .features__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .features {
+    padding: 64px 0;
+  }
+
+  .features__grid {
+    grid-template-columns: 1fr;
+  }
+}

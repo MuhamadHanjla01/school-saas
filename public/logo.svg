@@ -1,0 +1,12 @@
+<svg width="200" height="48" viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded box for icon (bg-primary-container) -->
+  <rect x="8" y="8" width="32" height="32" rx="8" fill="#00c2a8" />
+  
+  <!-- Icon: account_balance (text-on-primary-container) -->
+  <svg x="12" y="12" width="24" height="24" viewBox="0 -960 960 960">
+    <path fill="#00493e" d="M120-120v-80h720v80H120Zm120-160v-360h80v360h-80Zm200 0v-360h80v360h-80Zm200 0v-360h80v360h-80ZM120-720v-80l360-120 360 120v80H120Z"/>
+  </svg>
+  
+  <!-- Text: ERPZO (text-primary) -->
+  <text x="48" y="34" font-family="'Inter', -apple-system, sans-serif" font-size="24" font-weight="600" fill="#006b5c" letter-spacing="-0.02em">ERPZO</text>
+</svg>
