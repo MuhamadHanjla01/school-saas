@@ -218,5 +218,5 @@ class ApiUnauthorizedException implements Exception {
 /// Global singleton API client for the app.
 // If testing locally on Android emulator, use http://10.0.2.2:3000
 // final apiClient = ApiClient(baseUrl: 'http://10.0.2.2:3000');
-final apiClient = ApiClient(baseUrl: 'http://127.0.1:3000'); // Assuming running windows locally or use tunnel
+final apiClient = ApiClient(baseUrl: 'https://school-backend-70ny.onrender.com'); // Live Production API
 

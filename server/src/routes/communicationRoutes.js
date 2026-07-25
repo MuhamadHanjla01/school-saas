@@ -33,6 +33,13 @@ router.post('/notices', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, re
     const notice = await prisma.notice.create({
       data: { title, content, type: type || 'General', audience: audience || 'All', priority: priority || 'Medium', schoolId: req.schoolId },
     });
+    
+    // Emit real-time event to all connected clients
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_notice', notice);
+    }
+
     res.status(201).json({ notice });
   } catch (error) {
     console.error('[notices] POST error:', error.message);

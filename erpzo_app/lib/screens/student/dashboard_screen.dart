@@ -6,6 +6,7 @@ import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
+import '../../services/socket_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -48,6 +49,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_selectedDay > 5 || _selectedDay < 0) _selectedDay = 0; // default to Monday if Sunday
 
     _loadData();
+
+    // Setup Socket.io real-time connection
+    final socketService = SocketService();
+    socketService.initSocket();
+    socketService.on('new_notice', (data) {
+      debugPrint('Real-time event received: new_notice');
+      // Reload dashboard data instantly
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
@@ -87,6 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     _animController.dispose();
+    SocketService().off('new_notice');
     super.dispose();
   }
 

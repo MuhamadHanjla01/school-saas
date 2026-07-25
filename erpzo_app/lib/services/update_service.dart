@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 
 class UpdateService {
   // Update this to your live Vercel URL
@@ -22,7 +25,6 @@ class UpdateService {
         final currentVersion = packageInfo.version;
 
         if (_isUpdateAvailable(currentVersion, latestVersion)) {
-          // Add a short delay so it doesn't pop up before the UI is fully rendered
           Future.delayed(const Duration(milliseconds: 500), () {
             _showUpdateDialog(
               context, 
@@ -63,40 +65,132 @@ class UpdateService {
       context: context,
       barrierDismissible: !forceUpdate,
       builder: (context) {
-        return WillPopScope(
-          onWillPop: () async => !forceUpdate,
-          child: AlertDialog(
-            title: Text('Update Available ($latestVersion)'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('A new version of ERPZO is available.'),
-                const SizedBox(height: 12),
-                Text('Release Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(releaseNotes),
-              ],
-            ),
-            actions: [
-              if (!forceUpdate)
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Later'),
-                ),
-              ElevatedButton(
-                onPressed: () async {
-                  final uri = Uri.parse(downloadUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text('Update Now'),
-              ),
-            ],
-          ),
+        return _UpdateDialogWidget(
+          latestVersion: latestVersion,
+          downloadUrl: downloadUrl,
+          releaseNotes: releaseNotes,
+          forceUpdate: forceUpdate,
         );
       },
+    );
+  }
+}
+
+class _UpdateDialogWidget extends StatefulWidget {
+  final String latestVersion;
+  final String downloadUrl;
+  final String releaseNotes;
+  final bool forceUpdate;
+
+  const _UpdateDialogWidget({
+    Key? key,
+    required this.latestVersion,
+    required this.downloadUrl,
+    required this.releaseNotes,
+    required this.forceUpdate,
+  }) : super(key: key);
+
+  @override
+  State<_UpdateDialogWidget> createState() => _UpdateDialogWidgetState();
+}
+
+class _UpdateDialogWidgetState extends State<_UpdateDialogWidget> {
+  bool _isDownloading = false;
+  double _progress = 0.0;
+  String _status = 'A new version of ERPZO is available.';
+
+  Future<void> _startDownload() async {
+    setState(() {
+      _isDownloading = true;
+      _status = 'Downloading...';
+    });
+
+    try {
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        setState(() {
+          _status = 'Storage error.';
+          _isDownloading = false;
+        });
+        return;
+      }
+      
+      final filePath = '${directory.path}/update_${widget.latestVersion}.apk';
+      final dio = Dio();
+      
+      await dio.download(
+        widget.downloadUrl,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            setState(() {
+              _progress = received / total;
+              _status = 'Downloading... ${(_progress * 100).toStringAsFixed(0)}%';
+            });
+          }
+        },
+      );
+
+      setState(() {
+        _status = 'Download complete! Installing...';
+      });
+
+      // Open the downloaded APK to trigger the Android installer
+      final result = await OpenFilex.open(filePath);
+      
+      if (result.type != ResultType.done) {
+        setState(() {
+          _status = 'Error opening APK: ${result.message}';
+          _isDownloading = false;
+        });
+      }
+      
+    } catch (e) {
+      setState(() {
+        _status = 'Failed to download update.';
+        _isDownloading = false;
+      });
+      print('Download error: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async => !widget.forceUpdate && !_isDownloading,
+      child: AlertDialog(
+        title: Text('Update Available (${widget.latestVersion})'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_status),
+            if (_isDownloading)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: LinearProgressIndicator(value: _progress),
+              ),
+            if (!_isDownloading) ...[
+              const SizedBox(height: 12),
+              const Text('Release Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(widget.releaseNotes),
+            ],
+          ],
+        ),
+        actions: [
+          if (!widget.forceUpdate && !_isDownloading)
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Later'),
+            ),
+          if (!_isDownloading)
+            ElevatedButton(
+              onPressed: _startDownload,
+              child: const Text('Update Now'),
+            ),
+        ],
+      ),
     );
   }
 }

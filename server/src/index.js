@@ -23,7 +23,30 @@ const { resolveTenant } = require('./middleware/tenantMiddleware');
 const { dbBreaker } = require('./prismaClient');
 const { cache } = require('./responseCache');
 
+const http = require('http');
+const { Server } = require('socket.io');
+
 const app = express();
+const server = http.createServer(app);
+
+// Setup Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  }
+});
+
+// Make io globally available to routes
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
+});
 
 // ── Global request timeout (10s) ──
 app.use((req, res, next) => {
@@ -94,6 +117,6 @@ app.post('/api/admin/cache/invalidate', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
