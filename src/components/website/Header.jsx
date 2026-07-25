@@ -138,7 +138,10 @@ export default function Header() {
         </ul>
 
         {/* CTA Buttons */}
-        <div className="header__actions">
+        <div className="header__actions flex items-center gap-2">
+          <a href="/downloads/erpzo-school.apk" download className="header__login text-label-lg flex items-center gap-1" id="btn-download-app">
+            <span className="material-symbols-outlined text-[18px]">android</span> App
+          </a>
           <button className="header__login text-label-lg" id="btn-login" onClick={() => navigate('/login')}>Login</button>
           <button className="header__demo text-label-lg" id="btn-get-demo" onClick={() => navigate('/demo')}>Get a Demo</button>
         </div>
@@ -193,9 +196,12 @@ export default function Header() {
                 </li>
               ))}
             </ul>
-            <div className="header__mobile-actions">
-              <button className="header__login text-label-lg" onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>Login</button>
-              <button className="header__demo text-label-lg" onClick={() => { navigate('/demo'); setMobileMenuOpen(false); }}>Get a Demo</button>
+            <div className="header__mobile-actions flex flex-col gap-3">
+              <a href="/downloads/erpzo-school.apk" download className="header__login text-label-lg flex items-center justify-center gap-2 border border-outline-variant p-2 rounded-lg w-full">
+                <span className="material-symbols-outlined">android</span> Download Android App
+              </a>
+              <button className="header__login text-label-lg w-full" onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>Login</button>
+              <button className="header__demo text-label-lg w-full" onClick={() => { navigate('/demo'); setMobileMenuOpen(false); }}>Get a Demo</button>
             </div>
           </div>
         )}
