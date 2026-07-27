@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
@@ -99,6 +100,9 @@ app.use('/api/notifications', verifyToken, resolveTenant, notificationRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 app.get('/api/health/circuits', (req, res) => {
   res.json({ circuits: [dbBreaker.getStatus()], timestamp: new Date().toISOString() });

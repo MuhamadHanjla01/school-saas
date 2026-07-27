@@ -5,6 +5,8 @@ import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Map<String, dynamic>? _student;
   bool _isLoading = true;
+  bool _isUploadingAvatar = false;
 
   @override
   void initState() {
@@ -67,6 +70,63 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _uploadAvatar() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (pickedFile == null) return;
+
+    setState(() {
+      _isUploadingAvatar = true;
+    });
+
+    try {
+      final storage = const FlutterSecureStorage();
+      final token = await storage.read(key: 'jwt_token');
+      
+      var request = http.MultipartRequest('POST', Uri.parse('${apiClient.baseUrl}/api/auth/me/avatar'));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('avatar', pickedFile.path));
+      
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        final resStr = await response.stream.bytesToString();
+        final data = jsonDecode(resStr);
+        final updatedUser = data['user'];
+        
+        // update secure storage
+        final userStr = await storage.read(key: 'user_data');
+        if (userStr != null) {
+          final userData = jsonDecode(userStr);
+          userData['avatar'] = updatedUser['avatar'];
+          await storage.write(key: 'user_data', value: jsonEncode(userData));
+        }
+
+        // fetch profile again to update _student map
+        await _fetchProfile(); 
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avatar updated successfully!')));
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update avatar')));
+        }
+      }
+    } catch (e) {
+      debugPrint('Avatar upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error uploading avatar')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAvatar = false;
+        });
+      }
     }
   }
 
@@ -179,29 +239,60 @@ class _ProfileScreenState extends State<ProfileScreen>
                 // Avatar
                 Transform.translate(
                   offset: const Offset(0, -40),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      color: const Color(0xFF00C2A8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(20),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
+                  child: GestureDetector(
+                    onTap: _isUploadingAvatar ? null : _uploadAvatar,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                            color: const Color(0xFF00C2A8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(20),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ],
+                            image: (_student?['user']?['avatar'] != null)
+                                ? DecorationImage(
+                                    image: NetworkImage(apiClient.baseUrl + _student!['user']['avatar']),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: _student?['user']?['avatar'] == null
+                              ? Text(
+                                  initials,
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        if (_isUploadingAvatar)
+                          const CircularProgressIndicator(color: Colors.white),
+                        if (!_isUploadingAvatar)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF00C2A8),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                            ),
+                          ),
                       ],
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
                     ),
                   ),
                 ),

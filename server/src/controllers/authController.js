@@ -195,6 +195,49 @@ exports.updateMe = async (req, res) => {
   }
 };
 
+// POST /api/auth/me/avatar — upload new avatar
+exports.updateAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const user = await dbCall(() => prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { avatar: true }
+    }));
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Delete old avatar if it exists and is a local file
+    if (user.avatar && user.avatar.startsWith('/uploads/')) {
+      const fs = require('fs');
+      const path = require('path');
+      const oldPath = path.join(__dirname, '../../public', user.avatar);
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.unlinkSync(oldPath);
+        } catch (err) {
+          console.error('[updateAvatar] Failed to delete old avatar:', err);
+        }
+      }
+    }
+
+    const avatarUrl = `/uploads/${req.file.filename}`;
+
+    const updatedUser = await dbCall(() => prisma.user.update({
+      where: { id: req.user.userId },
+      data: { avatar: avatarUrl },
+      select: { id: true, email: true, role: true, name: true, phone: true, avatar: true }
+    }));
+
+    res.json({ user: updatedUser });
+  } catch (error) {
+    console.error('[updateAvatar]', error);
+    res.status(500).json({ error: 'Failed to upload avatar' });
+  }
+};
+
 // POST /api/auth/change-password
 exports.changePassword = async (req, res) => {
   try {
