@@ -271,7 +271,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                       Navigator.of(context).pushNamed(
                         '/teacher_chat',
                         arguments: {
-                          'otherUserId': _teacher!['user']?['id'],
+                          'otherUserId': _teacher!['userId'] ?? _teacher!['user']?['id'],
                           'otherUserName': name
                         },
                       );

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -8,8 +10,8 @@ class SocketService {
   
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
-  // Use your live Render backend URL
-  static const String _serverUrl = 'https://school-backend-your-render-url.onrender.com';
+  // Use live Render backend URL
+  static const String _serverUrl = 'https://school-backend-70ny.onrender.com';
 
   factory SocketService() {
     return _instance;
@@ -58,6 +60,24 @@ class SocketService {
         title: 'New Notice: ${data['title'] ?? 'Important'}',
         body: data['content'] ?? 'Check the dashboard for details.',
       );
+    });
+
+    // Listen for new messages for push notifications
+    socket!.on('new_message', (data) async {
+      final storage = const FlutterSecureStorage();
+      final userStr = await storage.read(key: 'user_data');
+      if (userStr != null) {
+        final userData = jsonDecode(userStr);
+        final currentUserId = userData['id'];
+        
+        // Only show notification if the message is for the current user
+        if (data['receiverId'] == currentUserId) {
+          _showLocalNotification(
+            title: 'Message from ${data['senderName'] ?? 'Someone'}',
+            body: data['content'] ?? 'You received a new message.',
+          );
+        }
+      }
     });
   }
 

@@ -77,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       final userStr = await _storage.read(key: 'user_data');
       if (userStr != null) {
         final userData = jsonDecode(userStr);
-        _userName = userData['student']?['name'] ?? userData['email'] ?? 'Student';
+        _userName = userData['name'] ?? userData['student']?['name'] ?? userData['email'] ?? 'Student';
         _classId = userData['student']?['classId'];
       }
 
@@ -846,23 +846,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                         ),
                       )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00C2A8),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Ongoing',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ],

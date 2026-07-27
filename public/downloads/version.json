@@ -1,6 +1,6 @@
 {
-  "latest_version": "1.0.5",
+  "latest_version": "1.0.6",
   "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
-  "release_notes": "Added Notifications system with real-time updates and unread counts"
+  "release_notes": "Fixed dashboard name display, removed 'ongoing' tag, added teacher messaging with real-time push notifications!"
 }
