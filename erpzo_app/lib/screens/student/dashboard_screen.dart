@@ -7,6 +7,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
 import '../../services/socket_service.dart';
+import '../../services/update_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -58,6 +59,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       // Reload dashboard data instantly
       _loadData();
     });
+    
+    UpdateService.checkForUpdates(context);
   }
 
   Future<void> _loadData() async {

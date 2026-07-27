@@ -4,7 +4,6 @@ import 'api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'screens/student/dashboard_screen.dart';
-import 'services/update_service.dart';
 import 'screens/student/class_routine_screen.dart';
 import 'screens/student/calendar_screen.dart';
 import 'screens/student/assignments_screen.dart';
@@ -41,7 +40,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    UpdateService.checkForUpdates(context);
     _checkLoginStatus();
   }
 
@@ -49,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Add a tiny delay just so the splash screen doesn't instantly flash
     await Future.delayed(const Duration(milliseconds: 500));
 
-    final token = await _storage.read(key: 'jwt');
+    final token = await _storage.read(key: 'jwt_token');
 
     if (token == null || JwtDecoder.isExpired(token)) {
       // No token or expired token -> go to login
@@ -140,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
 
-        await _storage.write(key: 'jwt', value: data['accessToken']);
+        await _storage.write(key: 'jwt_token', value: data['accessToken']);
         if (data['refreshToken'] != null) {
           await _storage.write(key: 'refresh_token', value: data['refreshToken']);
         }
