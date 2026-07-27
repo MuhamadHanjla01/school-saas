@@ -397,12 +397,12 @@ class _CalendarScreenState extends State<CalendarScreen>
                   : isToday
                       ? const Color(0xFF006B5C).withAlpha(20)
                       : eventType != null
-                          ? _eventColors[eventType]!.withAlpha(25)
+                          ? (_eventColors[eventType] ?? const Color(0xFF006B5C)).withAlpha(25)
                           : Colors.transparent,
               shape: BoxShape.circle,
               border: eventType != null && !isSelected
                   ? Border.all(
-                      color: _eventColors[eventType]!.withAlpha(60),
+                      color: (_eventColors[eventType] ?? const Color(0xFF006B5C)).withAlpha(60),
                       width: 1.5,
                     )
                   : null,
@@ -419,7 +419,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                     color: isSelected
                         ? Colors.white
                         : eventType != null
-                            ? _eventColors[eventType]!
+                            ? (_eventColors[eventType] ?? const Color(0xFF006B5C))
                             : const Color(0xFF1A1C1E),
                   ),
                 ),
@@ -431,7 +431,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                     decoration: BoxDecoration(
                       color: isSelected
                           ? Colors.white
-                          : _eventColors[eventType]!,
+                          : (_eventColors[eventType] ?? const Color(0xFF006B5C)),
                       shape: BoxShape.circle,
                     ),
                   ),

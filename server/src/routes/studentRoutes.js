@@ -4,6 +4,26 @@ const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const bcrypt = require('bcryptjs');
 const { checkRole } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 // GET /api/students — list all students
 router.get('/', async (req, res) => {
@@ -139,14 +159,66 @@ router.post('/', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
 });
 
 // PUT /api/students/:id — update student
-router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
+router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), upload.single('avatar'), async (req, res) => {
   try {
     const { name, guardianName, phone, classId, status } = req.body;
+    
     const student = await dbCall(() => prisma.student.update({
       where: { id: req.params.id },
       data: { name, guardianName, phone, classId, status },
     }));
-    res.json({ student });
+
+    let avatarUrl = undefined;
+    if (req.file) {
+      avatarUrl = `/uploads/${req.file.filename}`;
+      // Find the associated user
+      const user = await dbCall(() => prisma.user.findFirst({
+        where: { studentId: req.params.id }
+      }));
+
+      if (user) {
+        // Delete old avatar if it exists
+        if (user.avatar && user.avatar.startsWith('/uploads/')) {
+          const oldPath = path.join(__dirname, '../../public', user.avatar);
+          if (fs.existsSync(oldPath)) {
+            try {
+              fs.unlinkSync(oldPath);
+            } catch (err) {
+              console.error('[students] Failed to delete old avatar:', err);
+            }
+          }
+        }
+        
+        // Update user's avatar and name/phone
+        await dbCall(() => prisma.user.update({
+          where: { id: user.id },
+          data: { avatar: avatarUrl, name, phone }
+        }));
+        
+        // Emit profile_updated event to notify the Flutter app instantly
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('profile_updated', { userId: user.id, studentId: student.id });
+        }
+      }
+    } else {
+       // If no avatar is uploaded, we might still want to update user name/phone and emit event
+       const user = await dbCall(() => prisma.user.findFirst({
+        where: { studentId: req.params.id }
+      }));
+      if (user) {
+        await dbCall(() => prisma.user.update({
+          where: { id: user.id },
+          data: { name, phone }
+        }));
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('profile_updated', { userId: user.id, studentId: student.id });
+        }
+      }
+    }
+
+    res.json({ student, avatarUrl });
   } catch (error) {
     console.error('[students] PUT error:', error.message);
     res.status(500).json({ error: 'Failed to update student' });

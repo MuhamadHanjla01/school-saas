@@ -80,6 +80,9 @@ export default function StudentsView({ dark }) {
   const [resetForm, setResetForm] = useState({ oldPassword: '', newPassword: '' });
   const [toast, setToast] = useState(null);
 
+  const [editStudent, setEditStudent] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', guardianName: '', status: 'Active', avatar: null });
+
   const fetchStudents = async () => {
     try {
       const res = await axios.get('https://school-backend-70ny.onrender.com/api/students');
@@ -143,6 +146,37 @@ export default function StudentsView({ dark }) {
     } catch (err) {
       console.error(err);
       setToast({ message: 'Failed to promote student', type: 'error' });
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editStudent) return;
+    try {
+      const dbId = editStudent.id_db || editStudent.id;
+      const formData = new FormData();
+      formData.append('name', editForm.name);
+      formData.append('phone', editForm.phone);
+      formData.append('guardianName', editForm.guardianName);
+      formData.append('status', editForm.status);
+      if (editForm.avatar) {
+        formData.append('avatar', editForm.avatar);
+      }
+
+      const token = localStorage.getItem('school_token'); // Ensure admin auth is passed if using authMiddleware
+      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      setToast({ message: `Student updated successfully`, type: 'success' });
+      setEditStudent(null);
+      fetchStudents();
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Failed to update student', type: 'error' });
     }
   };
 
@@ -304,6 +338,12 @@ export default function StudentsView({ dark }) {
                             <button onClick={() => { setResetPasswordStudent(s); setResetForm({ oldPassword: '', newPassword: '' }); }} className={`p-2 rounded-lg transition-colors ${dark ? 'text-[#bbcac4] hover:text-primary hover:bg-[#3c4a46]' : 'text-[#3c4a46] hover:text-[#006b5c] hover:bg-[#e8e8ea]'}`} title="Reset Password">
                               <span className="material-symbols-outlined">lock_reset</span>
                             </button>
+                            <button onClick={() => { 
+                              setEditStudent(s); 
+                              setEditForm({ name: s.name || '', phone: s.phone || '', guardianName: s.guardian || '', status: s.status || 'Active', avatar: null }); 
+                            }} className={`p-2 rounded-lg transition-colors ${dark ? 'text-[#bbcac4] hover:text-[#00c2a8] hover:bg-[#3c4a46]' : 'text-[#3c4a46] hover:text-[#006b5c] hover:bg-[#e8e8ea]'}`} title="Edit Profile">
+                              <span className="material-symbols-outlined">edit</span>
+                            </button>
                             <button onClick={() => setPromoteStudent(s)} className={`p-2 rounded-lg transition-colors ${dark ? 'text-[#bbcac4] hover:text-[#68abff] hover:bg-[#3c4a46]' : 'text-[#3c4a46] hover:text-[#0060ac] hover:bg-[#e8e8ea]'}`} title="Promote Student">
                               <span className="material-symbols-outlined">upgrade</span>
                             </button>
@@ -427,6 +467,35 @@ export default function StudentsView({ dark }) {
             <div className="flex justify-end gap-2 mt-6">
               <button type="button" onClick={() => setResetPasswordStudent(null)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">Cancel</button>
               <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#006b5c] text-white hover:brightness-110 transition-colors">Update Password</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Student Modal */}
+      {editStudent && (
+        <Modal title={`Edit Profile: ${editStudent.name}`} onClose={() => setEditStudent(null)}>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Name</label>
+              <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Guardian Name</label>
+              <input type="text" required value={editForm.guardianName} onChange={e => setEditForm({...editForm, guardianName: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Phone</label>
+              <input type="text" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Profile Photo / Avatar</label>
+              <input type="file" accept="image/*" onChange={e => setEditForm({...editForm, avatar: e.target.files[0]})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+              <p className={`text-xs mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Leave blank to keep current photo.</p>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button type="button" onClick={() => setEditStudent(null)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">Cancel</button>
+              <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#006b5c] text-white hover:brightness-110 transition-colors">Save Changes</button>
             </div>
           </form>
         </Modal>

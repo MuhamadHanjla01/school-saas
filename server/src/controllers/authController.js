@@ -69,6 +69,7 @@ exports.login = async (req, res) => {
 
     res.json({
       accessToken,
+      refreshToken, // Send to mobile app
       user: {
         id: user.id, email: user.email, role: user.role, schoolId: user.schoolId, name: user.name,
         student: user.student, teacher: user.teacher
@@ -89,7 +90,7 @@ exports.login = async (req, res) => {
 
 exports.refresh = async (req, res) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
     if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
 
     let decoded;

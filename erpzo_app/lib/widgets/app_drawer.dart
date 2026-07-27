@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/socket_service.dart';
 
 class AppDrawer extends StatefulWidget {
   final String currentRoute; 
@@ -20,6 +21,25 @@ class _AppDrawerState extends State<AppDrawer> {
   void initState() {
     super.initState();
     _loadUserData();
+    
+    // Setup Socket.io real-time connection for live updates while drawer is open
+    final socketService = SocketService();
+    socketService.on('profile_updated', _onProfileUpdated);
+  }
+
+  void _onProfileUpdated(dynamic data) {
+    // We delay slightly to allow the main screen to fetch and save the new data to SecureStorage
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _loadUserData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    SocketService().off('profile_updated');
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -123,9 +143,10 @@ class _AppDrawerState extends State<AppDrawer> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(color: primaryContainer, width: 2),
-                            image: const DecorationImage(
-                              image: NetworkImage(
-                                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDxthVtnHUvyZC61rtsLhP74xe_zGLJVf3Ov4ljqyDYCzxFc0SsPJxfpiGN6Eh_94yGTSBnRcfCOY1LwlEZo1g5h-ofMHCyj8Sf0mLMrmliU3Jxe8gdO2BC_6iZXnu9PT-a93A1zroL91g2b_9Z4UiDCeq_dEtsCi5QqA9ryrcvJ_yZbZQqpnAsi4jlsdlojVLremQx101IiUG2CEalvWueFVRFHKqA-ILpw3WLZrJxtPWP0TWvl8AF-da_Ez8OadpLsNwSdxe2Nq6b'),
+                            image: DecorationImage(
+                              image: _userData != null && _userData!['avatar'] != null 
+                                  ? NetworkImage('https://school-backend-70ny.onrender.com${_userData!['avatar']}') 
+                                  : const NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxthVtnHUvyZC61rtsLhP74xe_zGLJVf3Ov4ljqyDYCzxFc0SsPJxfpiGN6Eh_94yGTSBnRcfCOY1LwlEZo1g5h-ofMHCyj8Sf0mLMrmliU3Jxe8gdO2BC_6iZXnu9PT-a93A1zroL91g2b_9Z4UiDCeq_dEtsCi5QqA9ryrcvJ_yZbZQqpnAsi4jlsdlojVLremQx101IiUG2CEalvWueFVRFHKqA-ILpw3WLZrJxtPWP0TWvl8AF-da_Ez8OadpLsNwSdxe2Nq6b') as ImageProvider,
                               fit: BoxFit.cover,
                             ),
                           ),

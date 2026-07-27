@@ -49,17 +49,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final token = await _storage.read(key: 'jwt_token');
 
-    if (token == null || JwtDecoder.isExpired(token)) {
-      // No token or expired token -> go to login
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
-      }
+    if (token == null) {
+      if (mounted) Navigator.of(context).pushReplacementNamed('/login');
       return;
+    }
+
+    String activeToken = token;
+    if (JwtDecoder.isExpired(token)) {
+      final refreshed = await apiClient.refreshToken();
+      if (!refreshed) {
+        if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      activeToken = (await _storage.read(key: 'jwt_token')) ?? token;
     }
 
     // Token exists and is valid -> decode and check role
     try {
-      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(activeToken);
       final role = decodedToken['role']?.toString().toLowerCase();
 
       if (mounted) {

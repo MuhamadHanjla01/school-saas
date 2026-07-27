@@ -7,6 +7,7 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import '../../services/socket_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,6 +39,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     _animController.forward();
     _fetchProfile();
+
+    final socketService = SocketService();
+    socketService.on('profile_updated', _onProfileUpdated);
+  }
+
+  void _onProfileUpdated(dynamic data) {
+    if (mounted) {
+      _fetchProfile();
+    }
   }
 
   Future<void> _fetchProfile() async {
@@ -133,6 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void dispose() {
     _animController.dispose();
+    SocketService().off('profile_updated');
     super.dispose();
   }
 

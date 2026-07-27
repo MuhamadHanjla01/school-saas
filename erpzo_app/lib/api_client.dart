@@ -46,15 +46,15 @@ class ApiClient {
   }
 
   /// Handle Token Refresh
-  Future<bool> _refreshToken() async {
-    final refreshToken = await _storage.read(key: 'refresh_token');
-    if (refreshToken == null) return false;
+  Future<bool> refreshToken() async {
+    final refToken = await _storage.read(key: 'refresh_token');
+    if (refToken == null) return false;
 
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/api/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refreshToken': refreshToken}),
+        body: jsonEncode({'refreshToken': refToken}),
       ).timeout(timeout);
 
       if (res.statusCode == 200) {
@@ -111,7 +111,7 @@ class ApiClient {
     http.Response response = await _execute(requestFn);
 
     if (response.statusCode == 401) {
-      final refreshed = await _refreshToken();
+      final refreshed = await refreshToken();
       if (refreshed) {
         response = await _execute(requestFn);
       } else {

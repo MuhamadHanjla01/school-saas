@@ -3,6 +3,26 @@ const router = express.Router();
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 // GET /api/teachers — list all teachers
 router.get('/', async (req, res) => {
@@ -206,14 +226,60 @@ router.post('/', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
 });
 
 // PUT /api/teachers/:id — update teacher
-router.put('/:id', async (req, res) => {
+router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), upload.single('avatar'), async (req, res) => {
   try {
     const { name, department, phone, status } = req.body;
     const teacher = await dbCall(() => prisma.teacher.update({
       where: { id: req.params.id },
       data: { name, department, phone, status },
     }));
-    res.json({ teacher });
+
+    let avatarUrl = undefined;
+    if (req.file) {
+      avatarUrl = `/uploads/${req.file.filename}`;
+      const user = await dbCall(() => prisma.user.findFirst({
+        where: { teacherId: req.params.id }
+      }));
+
+      if (user) {
+        if (user.avatar && user.avatar.startsWith('/uploads/')) {
+          const oldPath = path.join(__dirname, '../../public', user.avatar);
+          if (fs.existsSync(oldPath)) {
+            try {
+              fs.unlinkSync(oldPath);
+            } catch (err) {
+              console.error('[teachers] Failed to delete old avatar:', err);
+            }
+          }
+        }
+        
+        await dbCall(() => prisma.user.update({
+          where: { id: user.id },
+          data: { avatar: avatarUrl, name, phone }
+        }));
+        
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('profile_updated', { userId: user.id, teacherId: teacher.id });
+        }
+      }
+    } else {
+       const user = await dbCall(() => prisma.user.findFirst({
+        where: { teacherId: req.params.id }
+      }));
+      if (user) {
+        await dbCall(() => prisma.user.update({
+          where: { id: user.id },
+          data: { name, phone }
+        }));
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('profile_updated', { userId: user.id, teacherId: teacher.id });
+        }
+      }
+    }
+
+    res.json({ teacher, avatarUrl });
   } catch (error) {
     console.error('[teachers] PUT error:', error.message);
     res.status(500).json({ error: 'Failed to update teacher' });

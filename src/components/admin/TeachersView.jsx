@@ -80,6 +80,10 @@ export default function TeachersView({ dark }) {
   const [promoteForm, setPromoteForm] = useState({ teacherId: '', classId: '', department: '', title: '' });
   const [classes, setClasses] = useState([]);
 
+  // Edit Teacher
+  const [editTeacher, setEditTeacher] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', department: '', status: 'Active', avatar: null });
+
   const submitPromote = async (e) => {
     e.preventDefault();
     if (!promoteForm.teacherId) {
@@ -127,6 +131,47 @@ export default function TeachersView({ dark }) {
     } catch (err) {
       console.error(err);
       setToast({ message: 'Failed to update password', type: 'error' });
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editTeacher) return;
+    try {
+      const dbId = editTeacher.id_db || editTeacher.id;
+      const formData = new FormData();
+      formData.append('name', editForm.name);
+      formData.append('phone', editForm.phone);
+      formData.append('department', editForm.department);
+      formData.append('status', editForm.status);
+      if (editForm.avatar) {
+        formData.append('avatar', editForm.avatar);
+      }
+
+      const token = localStorage.getItem('school_token');
+      await axios.put(`https://school-backend-70ny.onrender.com/api/teachers/${dbId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      
+      setToast({ message: `Teacher updated successfully`, type: 'success' });
+      setEditTeacher(null);
+      
+      // Reload teachers
+      const res = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
+      setTeachers(res.data.teachers.map(t => ({
+        ...t,
+        id_db: t.id,
+        id: t.employeeId || t.id || '',
+        dept: t.department || '',
+        subject: t.subjectNames?.join(', ') || 'N/A',
+        classes: t.classCount || 0,
+      })));
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Failed to update teacher', type: 'error' });
     }
   };
 
@@ -324,6 +369,17 @@ export default function TeachersView({ dark }) {
                       <span className="material-symbols-outlined text-[18px]">lock_reset</span>
                     </button>
                     <button 
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${dark ? 'text-[#bbcac4] hover:text-[#00c2a8] hover:bg-[#3c4a46]' : 'text-outline hover:text-[#006b5c] hover:bg-[#eeeef0]'}`}
+                      title="Edit Teacher"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setEditTeacher(t); 
+                        setEditForm({ name: t.name || '', phone: t.phone || '', department: t.dept || '', status: t.status || 'Active', avatar: null }); 
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button 
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${dark ? 'text-[#bbcac4] hover:bg-[#3c4a46] hover:text-white' : 'text-[#3c4a46] hover:bg-[#eeeef0]'}`}
                       onClick={(e) => { e.stopPropagation(); /* Update Status */ }}
                     >
@@ -450,6 +506,57 @@ export default function TeachersView({ dark }) {
             <div className="flex justify-end gap-2 mt-6">
               <button type="button" onClick={() => setResetPasswordTeacher(null)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">Cancel</button>
               <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#006b5c] text-white hover:brightness-110 transition-colors">Update Password</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Teacher Modal */}
+      {editTeacher && (
+        <Modal title={`Edit Profile: ${editTeacher.name}`} onClose={() => setEditTeacher(null)}>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Name</label>
+              <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Phone</label>
+              <input type="text" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Department</label>
+              <CustomSelect
+                value={editForm.department}
+                onChange={(val) => setEditForm({ ...editForm, department: val })}
+                options={[
+                  { value: '', label: 'Select Department' },
+                  ...uniqueDepts.map(d => ({ value: d, label: d }))
+                ]}
+                dark={dark}
+                className="pl-3 py-2 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Status</label>
+              <CustomSelect
+                value={editForm.status}
+                onChange={(val) => setEditForm({ ...editForm, status: val })}
+                options={[
+                  { value: 'Active', label: 'Active' },
+                  { value: 'On Leave', label: 'On Leave' }
+                ]}
+                dark={dark}
+                className="pl-3 py-2 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1">Profile Photo / Avatar</label>
+              <input type="file" accept="image/*" onChange={e => setEditForm({...editForm, avatar: e.target.files[0]})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
+              <p className={`text-xs mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Leave blank to keep current photo.</p>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button type="button" onClick={() => setEditTeacher(null)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">Cancel</button>
+              <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#006b5c] text-white hover:brightness-110 transition-colors">Save Changes</button>
             </div>
           </form>
         </Modal>

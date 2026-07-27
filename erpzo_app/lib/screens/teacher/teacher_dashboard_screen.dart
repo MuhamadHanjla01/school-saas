@@ -6,7 +6,9 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
 import '../../services/update_service.dart';
+import '../../services/socket_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   final String userName;
@@ -24,8 +26,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
+  final _storage = const FlutterSecureStorage();
   Map<String, List<dynamic>> _timetable = {};
   bool _isLoading = true;
+  String _currentUserName = '';
 
   @override
   void initState() {
@@ -43,6 +47,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     // Map today to 0-5 index (Mon=0, Sat=5, Sun mapped to Mon)
     final today = DateTime.now().weekday; // 1=Mon, 7=Sun
     _selectedDay = today >= 1 && today <= 6 ? today - 1 : 0;
+    
+    _currentUserName = widget.userName;
+    _loadUserData();
+
+    final socketService = SocketService();
+    socketService.initSocket();
+    socketService.on('profile_updated', _onProfileUpdated);
     
     _fetchTimetable();
     _requestNotificationPermission();
@@ -82,9 +93,43 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     }
   }
 
+  Future<void> _loadUserData() async {
+    final userStr = await _storage.read(key: 'user_data');
+    if (userStr != null) {
+      final userData = jsonDecode(userStr);
+      if (mounted) {
+        setState(() {
+          _currentUserName = userData['teacher']?['name'] ?? userData['email'] ?? widget.userName;
+        });
+      }
+    }
+  }
+
+  void _onProfileUpdated(dynamic data) async {
+    if (data != null && data['userId'] != null) {
+      final userStr = await _storage.read(key: 'user_data');
+      if (userStr != null) {
+        final userData = jsonDecode(userStr);
+        if (userData['id'] == data['userId']) {
+          try {
+            final res = await apiClient.get('/api/auth/me');
+            if (res.statusCode == 200) {
+              final newUserData = jsonDecode(res.body)['user'];
+              await _storage.write(key: 'user_data', value: jsonEncode(newUserData));
+              _loadUserData();
+            }
+          } catch (e) {
+            debugPrint('Failed to refresh profile: $e');
+          }
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
     _animController.dispose();
+    SocketService().off('profile_updated');
     super.dispose();
   }
 
@@ -252,7 +297,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
         ),
         const SizedBox(height: 4),
         Text(
-          widget.userName,
+          _currentUserName,
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,

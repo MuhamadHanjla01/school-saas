@@ -60,6 +60,28 @@ class _DashboardScreenState extends State<DashboardScreen>
       // Reload dashboard data instantly
       _loadData();
     });
+    socketService.on('profile_updated', (data) async {
+      debugPrint('Real-time event received: profile_updated');
+      if (data != null && data['userId'] != null) {
+        final userStr = await _storage.read(key: 'user_data');
+        if (userStr != null) {
+          final userData = jsonDecode(userStr);
+          if (userData['id'] == data['userId']) {
+            // Re-fetch profile data to sync live edits from Admin Dashboard
+            try {
+              final res = await apiClient.get('/api/auth/me');
+              if (res.statusCode == 200) {
+                final newUserData = jsonDecode(res.body)['user'];
+                await _storage.write(key: 'user_data', value: jsonEncode(newUserData));
+                _loadData(); // reload UI
+              }
+            } catch (e) {
+              debugPrint('Failed to refresh profile: $e');
+            }
+          }
+        }
+      }
+    });
     
     _requestNotificationPermission();
     UpdateService.checkForUpdates(context);
@@ -110,6 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void dispose() {
     _animController.dispose();
     SocketService().off('new_notice');
+    SocketService().off('profile_updated');
     super.dispose();
   }
 
