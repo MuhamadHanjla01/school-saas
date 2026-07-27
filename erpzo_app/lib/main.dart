@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 import 'screens/student/dashboard_screen.dart';
 import 'screens/student/class_routine_screen.dart';
 import 'screens/student/calendar_screen.dart';
@@ -43,9 +46,77 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkLoginStatus();
   }
 
+  Future<void> _checkAppUpdate() async {
+    try {
+      final res = await http.get(Uri.parse('https://school-saas-olive.vercel.app/downloads/version.json')).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final latestVersion = data['latest_version'];
+        final forceUpdate = data['force_update'] ?? false;
+        final downloadUrl = data['download_url'];
+        final releaseNotes = data['release_notes'] ?? '';
+
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version;
+
+        if (_isUpdateAvailable(currentVersion, latestVersion)) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: !forceUpdate,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Update Available'),
+                content: Text('A new version ($latestVersion) is available.\n\n$releaseNotes'),
+                actions: [
+                  if (!forceUpdate)
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _continueLogin();
+                      },
+                      child: const Text('Later'),
+                    ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final url = Uri.parse(downloadUrl);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: const Text('Update Now'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Update check failed: $e');
+    }
+    _continueLogin();
+  }
+
+  bool _isUpdateAvailable(String current, String latest) {
+    try {
+      final cParts = current.split('.').map(int.parse).toList();
+      final lParts = latest.split('.').map(int.parse).toList();
+      for (int i = 0; i < 3; i++) {
+        if (lParts[i] > cParts[i]) return true;
+        if (lParts[i] < cParts[i]) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<void> _checkLoginStatus() async {
     // Add a tiny delay just so the splash screen doesn't instantly flash
     await Future.delayed(const Duration(milliseconds: 500));
+    await _checkAppUpdate();
+  }
+
+  Future<void> _continueLogin() async {
 
     final token = await _storage.read(key: 'jwt_token');
 
