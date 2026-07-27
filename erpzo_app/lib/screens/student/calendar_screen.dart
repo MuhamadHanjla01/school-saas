@@ -30,16 +30,16 @@ class _CalendarScreenState extends State<CalendarScreen>
 
   static const Map<String, Color> _eventColors = {
     'holiday': Color(0xFFBA1A1A),
-    'event': Color(0xFF0060AC),
+    'program': Color(0xFF0060AC),
     'exam': Color(0xFF9D4224),
-    'deadline': Color(0xFF006B5C),
+    'result': Color(0xFF006B5C),
   };
 
   static const Map<String, Color> _eventAccentColors = {
     'holiday': Color(0xFFBA1A1A),
-    'event': Color(0xFF68ABFF),
+    'program': Color(0xFF68ABFF),
     'exam': Color(0xFFFF8D69),
-    'deadline': Color(0xFF00C2A8),
+    'result': Color(0xFF00C2A8),
   };
 
   List<Map<String, String>> _upcomingEvents = [];
@@ -78,7 +78,9 @@ class _CalendarScreenState extends State<CalendarScreen>
           final dateStr = e['date']?.toString() ?? '1';
           final monthStr = e['month']?.toString() ?? 'Jan';
           final title = e['title']?.toString() ?? 'Event';
-          final type = e['type']?.toString() ?? 'event';
+          String type = e['type']?.toString() ?? 'program';
+          if (type == 'event') type = 'program';
+          if (type == 'deadline') type = 'result';
           
           events.add({
             'title': title,

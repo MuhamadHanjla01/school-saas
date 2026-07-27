@@ -74,9 +74,11 @@ class _TeacherCalendarScreenState extends State<TeacherCalendarScreen>
         
         for (var e in events) {
           int? day = int.tryParse(e['date'] ?? '');
+          String type = e['type'] ?? 'program';
+          if (type == 'event') type = 'program';
+          if (type == 'deadline') type = 'result';
+
           if (day != null) {
-            String type = e['type'] ?? 'program';
-            if (type == 'deadline') type = 'result';
             mEvents[day] = type;
           }
           
@@ -85,7 +87,7 @@ class _TeacherCalendarScreenState extends State<TeacherCalendarScreen>
             'date': '${e['month'] ?? ''} ${e['date'] ?? ''}',
             'time': 'TBD',
             'desc': '',
-            'type': e['type'] == 'deadline' ? 'result' : (e['type'] ?? 'program'),
+            'type': type,
           });
         }
         

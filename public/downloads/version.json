@@ -1,6 +1,6 @@
 {
-  "latest_version": "1.0.2",
+  "latest_version": "1.0.3",
   "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
-  "release_notes": "Fixed in-app update mechanism URL"
+  "release_notes": "Fixed Calendar Page Blank Error"
 }
