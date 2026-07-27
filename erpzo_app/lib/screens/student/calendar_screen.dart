@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:nepali_utils/nepali_utils.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -46,8 +47,9 @@ class _CalendarScreenState extends State<CalendarScreen>
   @override
   void initState() {
     super.initState();
-    _currentMonth = DateTime.now().month;
-    _currentYear = DateTime.now().year;
+    NepaliUtils(Language.english);
+    _currentMonth = NepaliDateTime.now().month;
+    _currentYear = NepaliDateTime.now().year;
 
     _animController = AnimationController(
       vsync: this,
@@ -208,10 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen>
   // Calendar Card
   // ────────────────────────────────────────────
   Widget _buildCalendarCard() {
-    final monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
+    final monthName = NepaliDateFormat.MMMM(Language.english).format(NepaliDateTime(_currentYear, _currentMonth, 1));
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -234,7 +233,7 @@ class _CalendarScreenState extends State<CalendarScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${monthNames[_currentMonth - 1]} $_currentYear',
+                '$monthName $_currentYear',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -346,16 +345,13 @@ class _CalendarScreenState extends State<CalendarScreen>
   }
 
   Widget _buildDayGrid() {
-    // First day of the month (0 = Monday in DateTime, we need 0 = Sunday)
-    final firstDay = DateTime(_currentYear, _currentMonth, 1);
-    final daysInMonth =
-        DateTime(_currentYear, _currentMonth + 1, 0).day;
-    // DateTime.weekday: 1=Mon..7=Sun. We want 0=Sun..6=Sat
+    final firstDay = NepaliDateTime(_currentYear, _currentMonth, 1);
+    final daysInMonth = firstDay.totalDays;
     final startWeekday = firstDay.weekday % 7;
 
-    // Previous month's trailing days
-    final prevMonthDays =
-        DateTime(_currentYear, _currentMonth, 0).day;
+    final prevMonthDays = _currentMonth == 1 
+      ? NepaliDateTime(_currentYear - 1, 12, 1).totalDays 
+      : NepaliDateTime(_currentYear, _currentMonth - 1, 1).totalDays;
 
     final List<Widget> cells = [];
 
@@ -379,7 +375,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     for (int day = 1; day <= daysInMonth; day++) {
       final eventType = _monthEvents[day];
       final isSelected = _selectedDay == day;
-      final today = DateTime.now();
+      final today = NepaliDateTime.now();
       final isToday = today.day == day &&
           today.month == _currentMonth &&
           today.year == _currentYear;
