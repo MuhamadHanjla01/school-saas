@@ -9,7 +9,7 @@ import 'package:open_filex/open_filex.dart';
 
 class UpdateService {
   // Update this to your live Vercel URL
-  static const String updateJsonUrl = 'https://school-saas.vercel.app/downloads/version.json';
+  static const String updateJsonUrl = 'https://school-saas-olive.vercel.app/downloads/version.json';
 
   static Future<void> checkForUpdates(BuildContext context) async {
     try {

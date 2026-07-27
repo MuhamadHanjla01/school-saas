@@ -1,6 +1,6 @@
 {
-  "latest_version": "1.0.1",
-  "download_url": "https://school-saas.vercel.app/downloads/erpzo-school.apk",
+  "latest_version": "1.0.2",
+  "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
-  "release_notes": "Implemented BS Calendar and fixed auto-logout bug"
+  "release_notes": "Fixed in-app update mechanism URL"
 }
