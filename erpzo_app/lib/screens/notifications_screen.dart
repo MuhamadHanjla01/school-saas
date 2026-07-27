@@ -24,9 +24,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final res = await apiClient.get('/api/notifications');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        final fetchedNotifications = data['notifications'] ?? [];
+        
         setState(() {
-          _notifications = data['notifications'] ?? [];
+          _notifications = fetchedNotifications;
         });
+
+        // Mark all unread notifications as read
+        final unreadIds = (fetchedNotifications as List<dynamic>)
+            .where((n) => n['isRead'] == false)
+            .map((n) => n['id'])
+            .toList();
+
+        if (unreadIds.isNotEmpty) {
+          apiClient.post('/api/notifications/read', body: {'notificationIds': unreadIds});
+          // Optimistically mark them as read in local state
+          setState(() {
+            for (var notification in _notifications) {
+              notification['isRead'] = true;
+            }
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error fetching notifications: $e');

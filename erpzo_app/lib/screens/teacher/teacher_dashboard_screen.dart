@@ -6,6 +6,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
 import '../../services/update_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   final String userName;
@@ -44,7 +45,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen>
     _selectedDay = today >= 1 && today <= 6 ? today - 1 : 0;
     
     _fetchTimetable();
+    _requestNotificationPermission();
     UpdateService.checkForUpdates(context);
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final status = await Permission.notification.status;
+    if (status.isDenied) {
+      await Permission.notification.request();
+    }
   }
 
   Future<void> _fetchTimetable() async {

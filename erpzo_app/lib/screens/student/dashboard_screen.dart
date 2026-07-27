@@ -8,6 +8,7 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../../api_client.dart';
 import '../../services/socket_service.dart';
 import '../../services/update_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -60,7 +61,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       _loadData();
     });
     
+    _requestNotificationPermission();
     UpdateService.checkForUpdates(context);
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final status = await Permission.notification.status;
+    if (status.isDenied) {
+      await Permission.notification.request();
+    }
   }
 
   Future<void> _loadData() async {

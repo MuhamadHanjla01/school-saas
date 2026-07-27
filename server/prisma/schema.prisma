@@ -43,6 +43,7 @@ model School {
   salaries           Salary[]
   auditLogs          AuditLog[]
   documents          Document[]
+  notifications      Notification[]
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ model User {
 
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  notifications    Notification[]
 
   @@index([schoolId])
 }
@@ -580,5 +582,26 @@ model Document {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
+  @@index([schoolId])
+}
+
+// ─── Notification ──────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   // e.g. "assignment", "notice", "message", "system"
+  isRead    Boolean  @default(false)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
   @@index([schoolId])
 }

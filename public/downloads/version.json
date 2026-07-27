@@ -1,6 +1,6 @@
 {
-  "latest_version": "1.0.4",
+  "latest_version": "1.0.5",
   "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
-  "release_notes": "Fixed in-app update mechanism context error"
+  "release_notes": "Added Notifications system with real-time updates and unread counts"
 }

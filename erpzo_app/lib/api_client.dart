@@ -59,7 +59,7 @@ class ApiClient {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        await _storage.write(key: 'jwt_token', value: data['token']);
+        await _storage.write(key: 'jwt_token', value: data['accessToken']);
         return true;
       }
     } catch (_) {}

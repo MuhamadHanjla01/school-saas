@@ -48,6 +48,29 @@ router.post('/', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']), async (req
     const assignment = await prisma.assignment.create({
       data: { title, description, dueDate: new Date(dueDate), classId, subjectId, teacherId, schoolId: req.schoolId },
     });
+
+    // Create notifications for all students in the class
+    const studentsInClass = await prisma.student.findMany({
+      where: { classId, schoolId: req.schoolId },
+      include: { user: true }, // Ensure we have the user mapping
+    });
+
+    const notifications = studentsInClass
+      .filter(student => student.user)
+      .map(student => ({
+        title: `New Assignment: ${title}`,
+        message: `Due Date: ${new Date(dueDate).toLocaleDateString()}`,
+        type: 'Assignment',
+        userId: student.user.id,
+        schoolId: req.schoolId,
+      }));
+
+    if (notifications.length > 0) {
+      await prisma.notification.createMany({
+        data: notifications,
+      });
+    }
+
     res.status(201).json({ assignment });
   } catch (error) {
     console.error('[assignments] POST error:', error.message);

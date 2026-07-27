@@ -34,6 +34,30 @@ router.post('/notices', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, re
       data: { title, content, type: type || 'General', audience: audience || 'All', priority: priority || 'Medium', schoolId: req.schoolId },
     });
     
+    // Create notifications based on audience
+    let audienceQuery = { schoolId: req.schoolId };
+    if (audience === 'Students') audienceQuery.role = 'Student';
+    else if (audience === 'Teachers') audienceQuery.role = 'Teacher';
+    else if (audience === 'Parents') audienceQuery.role = 'Parent';
+    else if (audience === 'Staff') audienceQuery.role = 'Staff';
+
+    const targetUsers = await prisma.user.findMany({
+      where: audienceQuery,
+      select: { id: true },
+    });
+
+    if (targetUsers.length > 0) {
+      await prisma.notification.createMany({
+        data: targetUsers.map(u => ({
+          title: `New Notice: ${title}`,
+          message: content,
+          type: 'Notice',
+          userId: u.id,
+          schoolId: req.schoolId,
+        })),
+      });
+    }
+
     // Emit real-time event to all connected clients
     const io = req.app.get('io');
     if (io) {
@@ -200,6 +224,23 @@ router.post('/messages', async (req, res) => {
     const message = await prisma.message.create({
       data: { senderId: req.user.userId, receiverId, content, schoolId: req.schoolId },
     });
+
+    const senderUser = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      include: { teacher: true, student: true }
+    });
+    const senderName = senderUser?.teacher?.name || senderUser?.student?.name || senderUser?.email || 'Someone';
+
+    await prisma.notification.create({
+      data: {
+        title: `Message from ${senderName}`,
+        message: content,
+        type: 'Message',
+        userId: receiverId,
+        schoolId: req.schoolId,
+      },
+    });
+
     res.status(201).json({ message });
   } catch (error) {
     console.error('[messages] POST error:', error.message);
