@@ -241,6 +241,14 @@ router.post('/messages', async (req, res) => {
       },
     });
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_message', {
+        ...message,
+        senderName,
+      });
+    }
+
     res.status(201).json({ message });
   } catch (error) {
     console.error('[messages] POST error:', error.message);

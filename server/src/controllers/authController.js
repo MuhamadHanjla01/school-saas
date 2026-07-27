@@ -22,7 +22,13 @@ const generateRefreshToken = (user) => {
 exports.login = async (req, res) => {
   try {
     const { email, password, clientType } = req.body;
-    const user = await dbCall(() => prisma.user.findUnique({ where: { email } }));
+    const user = await dbCall(() => prisma.user.findUnique({
+      where: { email },
+      include: {
+        student: { include: { class: true } },
+        teacher: true
+      }
+    }));
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -63,7 +69,10 @@ exports.login = async (req, res) => {
 
     res.json({
       accessToken,
-      user: { id: user.id, email: user.email, role: user.role, schoolId: user.schoolId, name: user.name },
+      user: {
+        id: user.id, email: user.email, role: user.role, schoolId: user.schoolId, name: user.name,
+        student: user.student, teacher: user.teacher
+      },
       school: { id: school.id, name: school.name, slug: school.slug, logo: school.logo, plan: school.plan }
     });
   } catch (error) {
