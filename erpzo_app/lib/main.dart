@@ -100,13 +100,18 @@ class _SplashScreenState extends State<SplashScreen> {
 
   bool _isUpdateAvailable(String current, String latest) {
     try {
-      final cParts = current.split('.').map(int.parse).toList();
-      final lParts = latest.split('.').map(int.parse).toList();
+      String cleanVersion(String v) => v.split('+').first.split('-').first;
+      final cParts = cleanVersion(current).split('.').map(int.parse).toList();
+      final lParts = cleanVersion(latest).split('.').map(int.parse).toList();
       for (int i = 0; i < 3; i++) {
+        if (lParts.length <= i) break;
+        if (cParts.length <= i) return true;
         if (lParts[i] > cParts[i]) return true;
         if (lParts[i] < cParts[i]) return false;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Version parse error: $e');
+    }
     return false;
   }
 

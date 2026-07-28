@@ -1,5 +1,5 @@
 {
-  "latest_version": "1.0.8",
+  "latest_version": "1.0.9",
   "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
   "release_notes": "Added Profile Avatar Upload! You can now tap your profile picture to upload a custom avatar."
