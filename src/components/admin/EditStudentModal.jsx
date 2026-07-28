@@ -92,7 +92,7 @@ export default function EditStudentModal({ student, dark, onClose, onUpdate, set
   const labelClass = "block text-[11px] font-semibold mb-1";
 
   return (
-    <Modal title={`Edit Profile: ${student.name}`} onClose={onClose} width="max-w-4xl">
+    <Modal title={`Edit Profile: ${student.name}`} onClose={onClose} className="!max-w-[800px] !w-[95%]">
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full md:w-48 flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 shrink-0">
           {tabs.map(tab => (
