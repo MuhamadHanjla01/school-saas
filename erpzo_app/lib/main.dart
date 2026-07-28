@@ -79,8 +79,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       final url = Uri.parse(downloadUrl);
-                      if (await canLaunchUrl(url)) {
+                      try {
                         await launchUrl(url, mode: LaunchMode.externalApplication);
+                      } catch (e) {
+                        debugPrint('Could not launch $url');
                       }
                     },
                     child: const Text('Update Now'),
