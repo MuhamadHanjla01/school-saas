@@ -182,6 +182,26 @@ export default function StudentsView({ dark }) {
     }
   };
 
+  const handleDeleteStudent = async (student) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${student.name}? This action cannot be undone.`)) return;
+    try {
+      const dbId = student.id_db || student.id;
+      const token = localStorage.getItem('school_token');
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      });
+      setToast({ message: 'Student deleted successfully', type: 'success' });
+      // Remove from expanded rows if open
+      const newExpanded = { ...expandedRows };
+      delete newExpanded[dbId];
+      setExpandedRows(newExpanded);
+      fetchStudents();
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Failed to delete student', type: 'error' });
+    }
+  };
+
   const toggleDetails = async (dbId) => {
     // If already expanded, collapse it
     if (expandedRows[dbId]) {
@@ -372,11 +392,28 @@ export default function StudentsView({ dark }) {
                                 <div className={`p-4 border rounded-2xl space-y-3 ${dark ? 'border-[#3c4a46] bg-[#2f3133]' : 'border-[#bbcac4] bg-white'}`}>
                                   <div className={`flex items-center gap-2 ${dark ? 'text-primary' : 'text-[#006b5c]'}`}>
                                     <span className="material-symbols-outlined">badge</span>
-                                    <h4 className="text-sm font-semibold">Academic Profile</h4>
+                                    <h4 className="text-sm font-semibold">Profile Options</h4>
                                   </div>
                                   <p className={`text-sm ${dark ? 'text-[#bbcac4]' : 'text-[#3c4a46]'}`}>Status: {expandedData.status}</p>
                                   <p className={`text-sm ${dark ? 'text-[#bbcac4]' : 'text-[#3c4a46]'}`}>Guardian: {expandedData.guardianName}</p>
-                                  <a className={`text-xs font-bold hover:underline ${dark ? 'text-primary' : 'text-[#006b5c]'}`} href="#">Full Student Profile →</a>
+                                  <div className="flex gap-3 mt-4 pt-2 border-t border-[#006b5c]/10">
+                                    <button 
+                                      onClick={() => { 
+                                        setEditStudent(s); 
+                                      }} 
+                                      className="flex-1 py-2 px-3 flex items-center justify-center gap-2 bg-[#006b5c] text-white rounded-lg text-xs font-bold hover:brightness-110 transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                                      Edit Details
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteStudent(s)} 
+                                      className="flex-1 py-2 px-3 flex items-center justify-center gap-2 bg-red-600/10 text-red-600 rounded-lg text-xs font-bold hover:bg-red-600/20 transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                                      Delete
+                                    </button>
+                                  </div>
                                 </div>
                                 
                                 {/* Fee History */}
