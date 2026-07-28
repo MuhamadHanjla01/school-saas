@@ -161,11 +161,29 @@ router.post('/', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
 // PUT /api/students/:id — update student
 router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), upload.single('avatar'), async (req, res) => {
   try {
-    const { name, guardianName, phone, classId, status } = req.body;
+    const { 
+      name, guardianName, phone, classId, status,
+      middleName, lastName, dob, gender, bloodGroup, nationality, studentEmail,
+      motherName, parentRelationship, parentEmail, emergencyContact,
+      country, state, city, municipality, ward, street, postalCode,
+      prevSchool, prevQualification, prevClass, prevRoll, prevGpa, tcNumber,
+      admissionDate, academicYear, campus, section, rollNumber, house, medium, shift, 
+      transportRequired, hostelRequired
+    } = req.body;
     
     const student = await dbCall(() => prisma.student.update({
       where: { id: req.params.id },
-      data: { name, guardianName, phone, classId, status },
+      data: { 
+        name, guardianName, phone, classId, status,
+        middleName, lastName, dob: dob ? new Date(dob) : undefined, gender, bloodGroup, nationality, studentEmail,
+        motherName, parentRelationship, parentEmail, emergencyContact,
+        country, state, city, municipality, ward, street, postalCode,
+        prevSchool, prevQualification, prevClass, prevRoll, prevGpa, tcNumber,
+        admissionDate: admissionDate ? new Date(admissionDate) : undefined, 
+        academicYear, campus, section, rollNumber, house, medium, shift, 
+        transportRequired: transportRequired !== undefined ? String(transportRequired) === 'true' : undefined, 
+        hostelRequired: hostelRequired !== undefined ? String(hostelRequired) === 'true' : undefined
+      },
     }));
 
     let avatarUrl = undefined;

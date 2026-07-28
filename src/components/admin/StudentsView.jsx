@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Modal, Toast } from './AdminPage';
 import { useAuth } from '../../context/AuthContext';
+import StudentOnboardingWizard from './StudentOnboardingWizard';
+import EditStudentModal from './EditStudentModal';
 
 function CustomSelect({ value, onChange, options, dark, placeholder, className }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -474,31 +476,13 @@ export default function StudentsView({ dark }) {
 
       {/* Edit Student Modal */}
       {editStudent && (
-        <Modal title={`Edit Profile: ${editStudent.name}`} onClose={() => setEditStudent(null)}>
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-semibold mb-1">Name</label>
-              <input type="text" required value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold mb-1">Guardian Name</label>
-              <input type="text" required value={editForm.guardianName} onChange={e => setEditForm({...editForm, guardianName: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold mb-1">Phone</label>
-              <input type="text" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold mb-1">Profile Photo / Avatar</label>
-              <input type="file" accept="image/*" onChange={e => setEditForm({...editForm, avatar: e.target.files[0]})} className={`w-full p-2 rounded-lg focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border border-[#3c4a46] text-white' : 'bg-surface border border-outline-variant text-[#1a1c1e]'}`} />
-              <p className={`text-xs mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Leave blank to keep current photo.</p>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button type="button" onClick={() => setEditStudent(null)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors">Cancel</button>
-              <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#006b5c] text-white hover:brightness-110 transition-colors">Save Changes</button>
-            </div>
-          </form>
-        </Modal>
+        <EditStudentModal
+          student={editStudent}
+          dark={dark}
+          onClose={() => setEditStudent(null)}
+          onUpdate={fetchStudents}
+          setToast={setToast}
+        />
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
