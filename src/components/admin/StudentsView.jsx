@@ -90,6 +90,7 @@ export default function StudentsView({ dark }) {
       const res = await axios.get('https://school-backend-70ny.onrender.com/api/students');
       const formatted = res.data.students.map(s => ({
         ...s,
+        id_db: s.id,
         id: s.studentId,
         class: s.className,
         guardian: s.guardianName,
