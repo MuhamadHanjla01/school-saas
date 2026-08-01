@@ -186,10 +186,7 @@ export default function StudentsView({ dark }) {
     if (!window.confirm(`Are you sure you want to permanently delete ${student.name}? This action cannot be undone.`)) return;
     try {
       const dbId = student.id_db || student.id;
-      const token = localStorage.getItem('school_token');
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      });
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/students/${dbId}`);
       setToast({ message: 'Student deleted successfully', type: 'success' });
       // Remove from expanded rows if open
       const newExpanded = { ...expandedRows };

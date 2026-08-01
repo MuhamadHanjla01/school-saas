@@ -69,20 +69,15 @@ export default function EditStudentModal({ student, dark, onClose, onUpdate, set
         }
       });
 
-      const token = localStorage.getItem('school_token');
-      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
+      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData);
       
       setToast({ message: 'Student updated successfully', type: 'success' });
       onUpdate();
       onClose();
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Failed to update student', type: 'error' });
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setToast({ message: `Failed to update student: ${errorMsg}`, type: 'error' });
     } finally {
       setSubmitting(false);
     }
