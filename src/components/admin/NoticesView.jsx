@@ -35,10 +35,7 @@ export default function NoticesView({ dark }) {
   const handleDelete = async (noticeId) => {
     if (!confirm('Delete this notice?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/school/notices/${noticeId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/school/notices/${noticeId}`);
       setToast({ message: 'Notice deleted', type: 'success' });
       fetchNotices();
     } catch (err) {
@@ -54,10 +51,7 @@ export default function NoticesView({ dark }) {
     }
     
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
       setToast({ message: 'Notice posted', type: 'success' });
       setModalOpen(false);
       fetchNotices();

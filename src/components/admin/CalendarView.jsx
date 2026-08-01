@@ -29,10 +29,7 @@ export default function CalendarView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/school/events', form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/events', form);
       setToast({ message: 'Event added successfully', type: 'success' });
       setModalOpen(false);
       fetchEvents();

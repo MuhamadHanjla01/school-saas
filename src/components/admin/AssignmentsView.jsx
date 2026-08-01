@@ -58,16 +58,11 @@ export default function AssignmentsView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       if (form.id) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/assignments/${form.id}`, form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(`https://school-backend-70ny.onrender.com/api/assignments/${form.id}`, form);
         setToast({ message: 'Assignment updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/assignments', form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post('https://school-backend-70ny.onrender.com/api/assignments', form);
         setToast({ message: 'Assignment created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -80,10 +75,7 @@ export default function AssignmentsView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this assignment?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/assignments/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/assignments/${id}`);
       setToast({ message: 'Assignment deleted', type: 'success' });
       fetchAssignments();
     } catch (err) {

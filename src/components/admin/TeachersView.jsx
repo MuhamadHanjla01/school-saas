@@ -148,13 +148,7 @@ export default function TeachersView({ dark }) {
         formData.append('avatar', editForm.avatar);
       }
 
-      const token = localStorage.getItem('school_token');
-      await axios.put(`https://school-backend-70ny.onrender.com/api/teachers/${dbId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
+      await axios.put(`https://school-backend-70ny.onrender.com/api/teachers/${dbId}`, formData);
       
       setToast({ message: `Teacher updated successfully`, type: 'success' });
       setEditTeacher(null);

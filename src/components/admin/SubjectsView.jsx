@@ -40,16 +40,11 @@ export default function SubjectsView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       if (form.id) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/subjects/${form.id}`, form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(`https://school-backend-70ny.onrender.com/api/subjects/${form.id}`, form);
         setToast({ message: 'Subject updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/subjects', form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post('https://school-backend-70ny.onrender.com/api/subjects', form);
         setToast({ message: 'Subject added successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -62,10 +57,7 @@ export default function SubjectsView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this subject?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/subjects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/subjects/${id}`);
       setToast({ message: 'Subject deleted', type: 'success' });
       fetchSubjects();
     } catch (err) {

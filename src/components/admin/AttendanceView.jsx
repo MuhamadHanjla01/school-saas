@@ -78,13 +78,10 @@ export default function AttendanceView({ dark }) {
     }));
 
     try {
-      const token = localStorage.getItem('token');
       await axios.post('https://school-backend-70ny.onrender.com/api/attendance', {
         records,
         date: selectedDate,
         classId: selectedClass
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       setToast({ message: 'Attendance marked successfully', type: 'success' });
       setModalOpen(false);

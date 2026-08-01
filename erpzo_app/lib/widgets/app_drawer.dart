@@ -301,7 +301,6 @@ class _AppDrawerState extends State<AppDrawer> {
                     primaryContainer: primaryContainer,
                     onPrimaryContainer: onPrimaryContainer,
                     onSurfaceVariant: onSurfaceVariant,
-                    badgeCount: 3,
                     errorColor: errorColor,
                     onError: onError,
                     onTap: () {
@@ -380,8 +379,9 @@ class _AppDrawerState extends State<AppDrawer> {
                     onPrimaryContainer: onPrimaryContainer,
                     onSurfaceVariant: onSurfaceVariant,
                     onTap: () async {
-                      const storage = FlutterSecureStorage();
-                      await storage.delete(key: 'jwt');
+                      await _storage.delete(key: 'jwt_token');
+                      await _storage.delete(key: 'refresh_token');
+                      await _storage.delete(key: 'user_data');
                       if (context.mounted) {
                         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                       }

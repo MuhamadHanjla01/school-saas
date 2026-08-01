@@ -53,14 +53,11 @@ export default function ClassesView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
       if (editingClass) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/classes/${editingClass.id}`, formData, config);
+        await axios.put(`https://school-backend-70ny.onrender.com/api/classes/${editingClass.id}`, formData);
         setToast({ message: 'Class updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/classes', formData, config);
+        await axios.post('https://school-backend-70ny.onrender.com/api/classes', formData);
         setToast({ message: 'Class created successfully', type: 'success' });
       }
       setModalOpen(false);

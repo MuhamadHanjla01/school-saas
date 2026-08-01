@@ -62,10 +62,7 @@ export default function FeesView({ dark }) {
   const handleAddFee = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/fees', feeForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/fees', feeForm);
       setToast({ message: 'Fee structure added', type: 'success' });
       setModalType(null);
       fetchSummary();
@@ -77,10 +74,7 @@ export default function FeesView({ dark }) {
   const handleRecordPayment = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/fees/payments', paymentForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/fees/payments', paymentForm);
       setToast({ message: 'Payment recorded', type: 'success' });
       setModalType(null);
       fetchSummary();

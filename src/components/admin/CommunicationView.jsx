@@ -16,8 +16,7 @@ export default function CommunicationView({ dark }) {
     try {
       setLoading(true);
       const url = userId ? `https://school-backend-70ny.onrender.com/api/school/messages?withUser=${userId}` : 'https://school-backend-70ny.onrender.com/api/school/messages';
-      const token = localStorage.getItem('token');
-      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(url);
       setMessages(res.data.messages.reverse() || []);
       scrollToBottom();
     } catch (err) {
@@ -60,10 +59,7 @@ export default function CommunicationView({ dark }) {
     e.preventDefault();
     if (!selectedUserId || !content.trim()) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/school/messages', { receiverId: selectedUserId, content }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/school/messages', { receiverId: selectedUserId, content });
       setContent('');
       fetchMessages(selectedUserId);
     } catch (err) {

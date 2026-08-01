@@ -97,10 +97,7 @@ export default function TimetableView({ dark }) {
   const handleSaveSlot = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/timetable', { ...slotForm, classId: selectedClassId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/timetable', { ...slotForm, classId: selectedClassId });
       setToast({ message: 'Timetable slot added', type: 'success' });
       setModalOpen(false);
       fetchTimetable(selectedClassId);
@@ -112,10 +109,7 @@ export default function TimetableView({ dark }) {
   const handleDeleteSlot = async (id) => {
     if (!confirm('Delete this timetable slot?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/timetable/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.delete(`https://school-backend-70ny.onrender.com/api/timetable/${id}`);
       setToast({ message: 'Slot deleted', type: 'success' });
       fetchTimetable(selectedClassId);
     } catch (err) {

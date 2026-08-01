@@ -165,13 +165,7 @@ export default function StudentsView({ dark }) {
         formData.append('avatar', editForm.avatar);
       }
 
-      const token = localStorage.getItem('school_token'); // Ensure admin auth is passed if using authMiddleware
-      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      });
+      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData);
       
       setToast({ message: `Student updated successfully`, type: 'success' });
       setEditStudent(null);

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api_client.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/socket_service.dart';
 
 class CustomAppBar extends StatefulWidget {
   final VoidCallback? onMenuPressed;
@@ -24,11 +26,42 @@ class CustomAppBar extends StatefulWidget {
 
 class _CustomAppBarState extends State<CustomAppBar> {
   int _unreadCount = 0;
+  Map<String, dynamic>? _userData;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    _loadUserData();
+    
+    final socketService = SocketService();
+    socketService.on('profile_updated', _onProfileUpdated);
+  }
+
+  void _onProfileUpdated(dynamic data) {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _loadUserData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    SocketService().off('profile_updated');
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    final dataStr = await _storage.read(key: 'user_data');
+    if (dataStr != null) {
+      if (mounted) {
+        setState(() {
+          _userData = jsonDecode(dataStr);
+        });
+      }
+    }
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -133,9 +166,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
                           offset: const Offset(0, 4),
                         ),
                       ],
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                            'https://lh3.googleusercontent.com/aida-public/AB6AXuCcTVQ55-LqWVrfBiaX87Kci_GwPVlKS0krtPHuSGG3jmN2SpoFOmUzEiiMXUNxR9zHcKWsdp2FWcg2NHaBJDEFnc10-0H9DseieBOuGSZMOafY7GA6olBvNYNe2UkEIIK7MRpQAWnMATzyd9cfi8ggDo9PCCOTic8osSEjM7_2N0NwaqvtZ5IBl5m_LvXVqU99Q0BAQBOTlwmd3Evs_P1qb-70W-s6xPtr2HQlKa7tU3sowUN-OLiGyGpoM_TxMYZeCKjudLpUeKg1'),
+                      image: DecorationImage(
+                        image: _userData != null && _userData!['avatar'] != null 
+                            ? NetworkImage('https://school-backend-70ny.onrender.com${_userData!['avatar']}') 
+                            : const NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxthVtnHUvyZC61rtsLhP74xe_zGLJVf3Ov4ljqyDYCzxFc0SsPJxfpiGN6Eh_94yGTSBnRcfCOY1LwlEZo1g5h-ofMHCyj8Sf0mLMrmliU3Jxe8gdO2BC_6iZXnu9PT-a93A1zroL91g2b_9Z4UiDCeq_dEtsCi5QqA9ryrcvJ_yZbZQqpnAsi4jlsdlojVLremQx101IiUG2CEalvWueFVRFHKqA-ILpw3WLZrJxtPWP0TWvl8AF-da_Ez8OadpLsNwSdxe2Nq6b') as ImageProvider,
                         fit: BoxFit.cover,
                       ),
                     ),

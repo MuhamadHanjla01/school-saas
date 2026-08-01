@@ -102,10 +102,7 @@ export default function ExamsView({ dark }) {
   const handleSaveExam = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('https://school-backend-70ny.onrender.com/api/exams', examForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post('https://school-backend-70ny.onrender.com/api/exams', examForm);
       setToast({ message: 'Exam scheduled', type: 'success' });
       setModalType(null);
       fetchExams();
@@ -128,10 +125,7 @@ export default function ExamsView({ dark }) {
     }));
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`https://school-backend-70ny.onrender.com/api/exams/${selectedExam.id}/results`, { marks: marksArr }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(`https://school-backend-70ny.onrender.com/api/exams/${selectedExam.id}/results`, { marks: marksArr });
       setToast({ message: 'Marks saved successfully', type: 'success' });
       setModalType(null);
       fetchResultsSummary(selectedExam.id);
