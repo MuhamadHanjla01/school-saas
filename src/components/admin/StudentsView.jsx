@@ -147,7 +147,8 @@ export default function StudentsView({ dark }) {
       fetchStudents();
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Failed to promote student', type: 'error' });
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setToast({ message: `Failed to promote student: ${errorMsg}`, type: 'error' });
     }
   };
 
@@ -172,7 +173,8 @@ export default function StudentsView({ dark }) {
       fetchStudents();
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Failed to update student', type: 'error' });
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setToast({ message: `Failed to update student: ${errorMsg}`, type: 'error' });
     }
   };
 
@@ -189,7 +191,8 @@ export default function StudentsView({ dark }) {
       fetchStudents();
     } catch (err) {
       console.error(err);
-      setToast({ message: 'Failed to delete student', type: 'error' });
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setToast({ message: `Failed to delete student: ${errorMsg}`, type: 'error' });
     }
   };
 
