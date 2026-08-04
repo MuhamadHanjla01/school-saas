@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Modal, Toast } from './AdminUI';
 
-const INITIAL_BOOKS = [
-  { id: 'B001', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', category: 'Fiction', status: 'Available', issuedTo: null, dueDate: null },
-  { id: 'B002', title: 'Introduction to Algorithms', author: 'Thomas H. Cormen', category: 'Computer Science', status: 'Issued', issuedTo: 'S1029 (Aarav Sharma)', dueDate: '2024-08-15' },
-  { id: 'B003', title: 'Calculus: Early Transcendentals', author: 'James Stewart', category: 'Mathematics', status: 'Available', issuedTo: null, dueDate: null },
-  { id: 'B004', title: 'A Brief History of Time', author: 'Stephen Hawking', category: 'Physics', status: 'Issued', issuedTo: 'S1102 (Emma Watson)', dueDate: '2024-07-28' },
-];
-
 export default function LibraryView({ dark }) {
-  const [books, setBooks] = useState(INITIAL_BOOKS);
+  const [books, setBooks] = useState([]);
   const [search, setSearch] = useState('');
   
   const [toast, setToast] = useState(null);
@@ -19,6 +13,20 @@ export default function LibraryView({ dark }) {
 
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueForm, setIssueForm] = useState({ bookId: '', issuedTo: '', dueDate: '' });
+
+  const fetchBooks = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library`, { withCredentials: true });
+      setBooks(res.data);
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to fetch books', type: 'error' });
+    }
+  };
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
 
   const openAddModal = () => {
     setForm({ id: null, bookId: `B00${books.length + 1}`, title: '', author: '', category: '' });
@@ -30,44 +38,67 @@ export default function LibraryView({ dark }) {
     setIssueModalOpen(true);
   };
 
-  const handleSaveBook = (e) => {
+  const handleSaveBook = async (e) => {
     e.preventDefault();
-    const newBook = {
-      id: form.bookId,
-      title: form.title,
-      author: form.author,
-      category: form.category,
-      status: 'Available',
-      issuedTo: null,
-      dueDate: null
-    };
-    setBooks([newBook, ...books]);
-    setToast({ message: 'Book added successfully', type: 'success' });
-    setModalOpen(false);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library`, form, { withCredentials: true });
+      setToast({ message: 'Book added successfully', type: 'success' });
+      setModalOpen(false);
+      fetchBooks();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to add book', type: 'error' });
+    }
   };
 
-  const handleIssueBook = (e) => {
+  const handleIssueBook = async (e) => {
     e.preventDefault();
-    setBooks(books.map(b => b.id === issueForm.bookId ? { ...b, status: 'Issued', issuedTo: issueForm.issuedTo, dueDate: issueForm.dueDate } : b));
-    setToast({ message: 'Book issued successfully', type: 'success' });
-    setIssueModalOpen(false);
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${issueForm.bookId}`, {
+        status: 'Issued',
+        issuedTo: issueForm.issuedTo,
+        dueDate: issueForm.dueDate
+      }, { withCredentials: true });
+      setToast({ message: 'Book issued successfully', type: 'success' });
+      setIssueModalOpen(false);
+      fetchBooks();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to issue book', type: 'error' });
+    }
   };
 
-  const handleReturnBook = (id) => {
+  const handleReturnBook = async (id) => {
     if (!confirm('Mark this book as returned?')) return;
-    setBooks(books.map(b => b.id === id ? { ...b, status: 'Available', issuedTo: null, dueDate: null } : b));
-    setToast({ message: 'Book returned', type: 'success' });
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${id}`, {
+        status: 'Available',
+        issuedTo: null,
+        dueDate: null
+      }, { withCredentials: true });
+      setToast({ message: 'Book returned', type: 'success' });
+      fetchBooks();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to return book', type: 'error' });
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Delete this book?')) return;
-    setBooks(books.filter(b => b.id !== id));
-    setToast({ message: 'Book deleted', type: 'success' });
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${id}`, { withCredentials: true });
+      setToast({ message: 'Book deleted', type: 'success' });
+      fetchBooks();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to delete book', type: 'error' });
+    }
   };
 
   const q = search.toLowerCase();
   const filtered = books.filter(b => 
-    b.title.toLowerCase().includes(q) || b.id.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
+    b.title?.toLowerCase().includes(q) || b.bookId?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q)
   );
 
   return (
@@ -107,7 +138,7 @@ export default function LibraryView({ dark }) {
               ) : filtered.map((b, i) => (
                 <tr key={b.id} className={`admin-row-enter border-b ${dark ? 'border-[#3c4a46]/50 hover:bg-[#3c4a46]/30' : 'border-outline-variant/30 hover:bg-surface-container-low'}`}
                   style={{ animationDelay: `${i * 0.03}s` }}>
-                  <td className="py-3 px-4 font-mono font-semibold">{b.id}</td>
+                  <td className="py-3 px-4 font-mono font-semibold">{b.bookId}</td>
                   <td className="py-3 px-4">
                     <div className="font-bold">{b.title}</div>
                     <div className={`text-[10px] ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{b.author}</div>
@@ -120,7 +151,7 @@ export default function LibraryView({ dark }) {
                       <div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/10 text-secondary">Issued</span>
                         <div className={`text-[10px] mt-1 ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>To: {b.issuedTo}</div>
-                        <div className={`text-[10px] font-mono ${dark ? 'text-error' : 'text-error'}`}>Due: {b.dueDate}</div>
+                        <div className={`text-[10px] font-mono ${dark ? 'text-error' : 'text-error'}`}>Due: {b.dueDate ? new Date(b.dueDate).toLocaleDateString() : ''}</div>
                       </div>
                     )}
                   </td>

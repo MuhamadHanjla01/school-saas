@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import ManageSchoolsView from './ManageSchoolsView';
 import SchoolDetailsView from './SchoolDetailsView';
 import SchoolInquiriesView from './SchoolInquiriesView';
@@ -242,8 +243,15 @@ export default function SuperadminPage() {
   const [search, setSearch] = useState('');
   const [chartRange, setChartRange] = useState('12m');
   const [chartKey, setChartKey] = useState(0);
+  
+  const [stats, setStats] = useState({
+    totalSchools: 0,
+    activeSchools: 0,
+    recentSchools: []
+  });
   const [schools, setSchools] = useState(INITIAL_SCHOOLS);
   const [inquiries, setInquiries] = useState(INITIAL_INQUIRIES);
+  
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -257,6 +265,24 @@ export default function SuperadminPage() {
   // School Onboard form
   const [schoolOnboardForm, setSchoolOnboardForm] = useState({ name: '', email: '', plan: 'Starter' });
   const [schoolOnboardErrors, setSchoolOnboardErrors] = useState({});
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/dashboard-stats`, { withCredentials: true });
+        setStats(res.data);
+        // Also update local mock for schools table to use real recent schools
+        if (res.data.recentSchools && res.data.recentSchools.length > 0) {
+          setSchools(res.data.recentSchools);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats', error);
+      }
+    };
+    if (activeItem === 'dashboard') {
+      fetchStats();
+    }
+  }, [activeItem]);
 
   // Dark mode toggle
   useEffect(() => {
@@ -464,10 +490,10 @@ export default function SuperadminPage() {
               badge: <><span className="material-symbols-outlined mr-0.5" style={{ fontSize: '11px' }}>trending_up</span>+12.4%</>,
               badgeExtra: 'vs last month',
             }, {
-              label: 'Active Tenants', value: String(1380 + schools.length), icon: 'domain', color: '#0060ac',
-              badge: <><span className="material-symbols-outlined mr-0.5" style={{ fontSize: '11px' }}>school</span>{schools.filter((s) => s.status === 'Pending').length + inquiries.length} Pending</>,
+              label: 'Active Tenants', value: String(stats.activeSchools || 0), icon: 'domain', color: '#0060ac',
+              badge: <><span className="material-symbols-outlined mr-0.5" style={{ fontSize: '11px' }}>school</span>{(stats.totalSchools || 0) - (stats.activeSchools || 0)} Suspended/Pending</>,
             }, {
-              label: 'New Leads', value: '184', icon: 'person_add', color: '#9d4224',
+              label: 'New Leads', value: String(inquiries.length), icon: 'person_add', color: '#9d4224',
               badge: <><span className="material-symbols-outlined mr-0.5" style={{ fontSize: '11px' }}>bolt</span>High Intent</>,
             }, {
               label: 'System Health', value: '99.98%', icon: 'monitor_heart', color: '#006b5c', isHealth: true,
@@ -653,8 +679,8 @@ export default function SuperadminPage() {
           <ManageSchoolsView 
             dark={dark} 
             setShowOnboardModal={setShowSchoolOnboardModal} 
-            onViewSchool={(name) => {
-              setViewingSchool(name);
+            onViewSchool={(id, name) => {
+              setViewingSchool({ id, name });
               setActiveItem('School Details');
             }} 
           />
@@ -665,11 +691,11 @@ export default function SuperadminPage() {
           <SchoolInquiriesView dark={dark} setShowDemoOnboardModal={setShowOnboardModal} />
         )}
 
-        {/* ── School Details View ── */}
-        {activeItem === 'School Details' && (
+        {activeItem === 'School Details' && viewingSchool && (
           <SchoolDetailsView 
             dark={dark}
-            schoolName={viewingSchool}
+            schoolId={viewingSchool.id}
+            schoolName={viewingSchool.name}
             onBack={() => setActiveItem('Manage Schools')}
           />
         )}

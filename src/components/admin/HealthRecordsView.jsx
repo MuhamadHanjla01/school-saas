@@ -1,14 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Modal, Toast } from './AdminUI';
 
-const INITIAL_RECORDS = [
-  { id: 'HR-001', student: 'S1029 (Aarav Sharma)', bloodGroup: 'B+', allergies: 'Peanuts', lastCheckup: '2024-03-12', notes: 'Asthma inhaler required before sports.' },
-  { id: 'HR-002', student: 'S1102 (Emma Watson)', bloodGroup: 'O+', allergies: 'None', lastCheckup: '2024-01-05', notes: 'Fit for all activities.' },
-  { id: 'HR-003', student: 'S1055 (Michael Chang)', bloodGroup: 'A-', allergies: 'Dust', lastCheckup: '2024-05-20', notes: 'Mild eczema.' },
-];
-
 export default function HealthRecordsView({ dark }) {
-  const [records, setRecords] = useState(INITIAL_RECORDS);
+  const [records, setRecords] = useState([]);
   const [search, setSearch] = useState('');
   
   const [toast, setToast] = useState(null);
@@ -16,36 +11,56 @@ export default function HealthRecordsView({ dark }) {
   
   const [form, setForm] = useState({ id: null, student: '', bloodGroup: 'A+', allergies: 'None', lastCheckup: '', notes: '' });
 
+  const fetchRecords = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health`, { withCredentials: true });
+      setRecords(res.data);
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to fetch records', type: 'error' });
+    }
+  };
+
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
   const openAddModal = () => {
-    setForm({ id: null, student: '', bloodGroup: 'A+', allergies: 'None', lastCheckup: new Date().toISOString().split('T')[0], notes: '' });
+    setForm({ id: null, studentName: '', bloodGroup: 'A+', allergies: 'None', lastCheckup: new Date().toISOString().split('T')[0], notes: '' });
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (form.id) {
-      setRecords(records.map(r => r.id === form.id ? { ...r, ...form } : r));
-      setToast({ message: 'Record updated successfully', type: 'success' });
-    } else {
-      const newRecord = {
-        id: `HR-00${records.length + 1}`,
-        ...form
-      };
-      setRecords([...records, newRecord]);
-      setToast({ message: 'Record added successfully', type: 'success' });
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health`, {
+        ...form,
+        studentName: form.studentName || form.student
+      }, { withCredentials: true });
+      setToast({ message: form.id ? 'Record updated successfully' : 'Record added successfully', type: 'success' });
+      setModalOpen(false);
+      fetchRecords();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to save record', type: 'error' });
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Delete this health record?')) return;
-    setRecords(records.filter(r => r.id !== id));
-    setToast({ message: 'Record deleted', type: 'success' });
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health/${id}`, { withCredentials: true });
+      setToast({ message: 'Record deleted', type: 'success' });
+      fetchRecords();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to delete record', type: 'error' });
+    }
   };
 
   const q = search.toLowerCase();
   const filtered = records.filter(r => 
-    r.student.toLowerCase().includes(q) || r.id.toLowerCase().includes(q)
+    r.studentName?.toLowerCase().includes(q) || r.recordId?.toLowerCase().includes(q)
   );
 
   return (
@@ -86,13 +101,13 @@ export default function HealthRecordsView({ dark }) {
               ) : filtered.map((r, i) => (
                 <tr key={r.id} className={`admin-row-enter border-b ${dark ? 'border-[#3c4a46]/50 hover:bg-[#3c4a46]/30' : 'border-outline-variant/30 hover:bg-surface-container-low'}`}
                   style={{ animationDelay: `${i * 0.03}s` }}>
-                  <td className="py-3 px-4 font-mono font-semibold">{r.id}</td>
-                  <td className="py-3 px-4 font-bold">{r.student}</td>
+                  <td className="py-3 px-4 font-mono font-semibold">{r.recordId}</td>
+                  <td className="py-3 px-4 font-bold">{r.studentName}</td>
                   <td className="py-3 px-4 text-center">
                     <span className="px-2 py-1 bg-error text-white font-bold rounded-lg shadow-sm">{r.bloodGroup}</span>
                   </td>
                   <td className="py-3 px-4">{r.allergies}</td>
-                  <td className="py-3 px-4">{r.lastCheckup}</td>
+                  <td className="py-3 px-4">{new Date(r.lastCheckup).toLocaleDateString()}</td>
                   <td className="py-3 px-4 text-right">
                     <button onClick={() => { setForm(r); setModalOpen(true); }} className="text-primary text-[11px] font-semibold hover:underline mr-3">Edit</button>
                     <button onClick={() => handleDelete(r.id)} className="text-error text-[11px] font-semibold hover:underline">Delete</button>
@@ -109,7 +124,7 @@ export default function HealthRecordsView({ dark }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Student (ID or Name)</label>
-              <input required type="text" value={form.student} onChange={e => setForm({...form, student: e.target.value})} className="admin-input w-full" placeholder="e.g. S1025 (John Doe)" />
+              <input required type="text" value={form.studentName || form.student || ''} onChange={e => setForm({...form, studentName: e.target.value})} className="admin-input w-full" placeholder="e.g. S1025 (John Doe)" />
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
@@ -122,7 +137,7 @@ export default function HealthRecordsView({ dark }) {
               </div>
               <div className="flex-1">
                 <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Last Checkup</label>
-                <input required type="date" value={form.lastCheckup} onChange={e => setForm({...form, lastCheckup: e.target.value})} className="admin-input w-full" />
+                <input required type="date" value={form.lastCheckup ? form.lastCheckup.split('T')[0] : ''} onChange={e => setForm({...form, lastCheckup: e.target.value})} className="admin-input w-full" />
               </div>
             </div>
             <div>

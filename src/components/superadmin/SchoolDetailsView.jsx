@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-export default function SchoolDetailsView({ dark, schoolName = "Oakridge Academy", onBack }) {
+export default function SchoolDetailsView({ dark, schoolId, schoolName = "Oakridge Academy", onBack }) {
   const [activeTab, setActiveTab] = useState('User Management');
   const [selectedRole, setSelectedRole] = useState('All Roles');
   const [selectedClass, setSelectedClass] = useState('All Classes');
   const [searchUser, setSearchUser] = useState('');
+  const [users, setUsers] = useState([]);
   
   // Document Themes State
   const [idCardTheme, setIdCardTheme] = useState('Modern Minimal');
@@ -16,14 +18,18 @@ export default function SchoolDetailsView({ dark, schoolName = "Oakridge Academy
   const [resetUser, setResetUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
-  const [users] = useState([
-    { id: 1, name: 'Alice Anderson', role: 'Admin', email: 'admin@oakridge.edu', className: null, oldPassword: 'admin_pass_123' },
-    { id: 2, name: 'Bob Bradley', role: 'Teacher', email: 'b.bradley@oakridge.edu', className: null, oldPassword: 'teach_pass_456' },
-    { id: 3, name: 'Charlie Cox', role: 'Student', email: 'charlie.c@student.oakridge.edu', className: 'Class 10-A', oldPassword: 'stud_pass_789' },
-    { id: 4, name: 'David Smith', role: 'Student', email: 'david.s@student.oakridge.edu', className: 'Class 10-A', oldPassword: 'stud_pass_321' },
-    { id: 5, name: 'Eve Johnson', role: 'Student', email: 'eve.j@student.oakridge.edu', className: 'Class 9-B', oldPassword: 'stud_pass_654' },
-    { id: 6, name: 'Diana Davis', role: 'Parent', email: 'diana.davis@gmail.com', className: null, oldPassword: 'parent_pass_987' }
-  ]);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!schoolId) return;
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${schoolId}/users`, { withCredentials: true });
+        setUsers(res.data);
+      } catch (error) {
+        console.error('Failed to fetch school users:', error);
+      }
+    };
+    fetchUsers();
+  }, [schoolId]);
 
   const classes = ['All Classes', 'Class 9-B', 'Class 10-A'];
 

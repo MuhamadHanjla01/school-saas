@@ -20,8 +20,17 @@ const parentRoutes = require('./routes/parentRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const userRoutes = require('./routes/userRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const libraryRoutes = require('./routes/libraryRoutes');
+const laboratoryRoutes = require('./routes/laboratoryRoutes');
+const healthRoutes = require('./routes/healthRoutes');
+const transportRoutes = require('./routes/transportRoutes');
+const certificateRoutes = require('./routes/certificateRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const tenantRoutes = require('./routes/tenantRoutes');
 const { verifyToken } = require('./middleware/authMiddleware');
 const { resolveTenant } = require('./middleware/tenantMiddleware');
+const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const helmet = require('helmet');
 const { dbBreaker } = require('./prismaClient');
 const { cache } = require('./responseCache');
 
@@ -70,14 +79,18 @@ app.use(compression({
 }));
 
 app.use(cors({
-  origin: true,
+  origin: true, // You may want to restrict this in production (e.g., origin: process.env.VITE_API_URL || 'http://localhost:5173')
   credentials: true
 }));
+app.use(helmet()); // Add security headers
 app.use(express.json());
 app.use(cookieParser());
 
+// Apply global rate limiting
+app.use('/api/', apiLimiter);
+
 // ── Auth routes (no tenant required) ──
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
 // ── Protected routes: verify token + resolve tenant ──
 app.use('/api/students', verifyToken, resolveTenant, studentRoutes);
@@ -95,6 +108,13 @@ app.use('/api/parents', verifyToken, resolveTenant, parentRoutes);
 app.use('/api/audit-logs', verifyToken, resolveTenant, auditLogRoutes);
 app.use('/api/users', verifyToken, resolveTenant, userRoutes);
 app.use('/api/notifications', verifyToken, resolveTenant, notificationRoutes);
+app.use('/api/library', verifyToken, resolveTenant, libraryRoutes);
+app.use('/api/laboratory', verifyToken, resolveTenant, laboratoryRoutes);
+app.use('/api/health', verifyToken, resolveTenant, healthRoutes);
+app.use('/api/transport', verifyToken, resolveTenant, transportRoutes);
+app.use('/api/certificates', verifyToken, resolveTenant, certificateRoutes);
+app.use('/api/reports', verifyToken, resolveTenant, reportRoutes);
+app.use('/api/superadmin/tenants', verifyToken, tenantRoutes);
 
 // ── Health check ──
 app.get('/api/health', (req, res) => {

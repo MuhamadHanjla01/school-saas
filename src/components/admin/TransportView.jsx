@@ -1,14 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Modal, Toast } from './AdminUI';
 
-const INITIAL_ROUTES = [
-  { id: 'R01', name: 'Downtown Express', bus: 'Bus-104', driver: 'John Smith', capacity: 40, enrolled: 35, fee: 150 },
-  { id: 'R02', name: 'Westside Loop', bus: 'Bus-108', driver: 'Robert Doe', capacity: 30, enrolled: 30, fee: 120 },
-  { id: 'R03', name: 'North Hills Route', bus: 'Bus-112', driver: 'William Clark', capacity: 50, enrolled: 22, fee: 180 },
-];
-
 export default function TransportView({ dark }) {
-  const [routes, setRoutes] = useState(INITIAL_ROUTES);
+  const [routes, setRoutes] = useState([]);
   const [search, setSearch] = useState('');
   
   const [toast, setToast] = useState(null);
@@ -16,37 +11,58 @@ export default function TransportView({ dark }) {
   
   const [form, setForm] = useState({ id: null, name: '', bus: '', driver: '', capacity: 40, fee: 150 });
 
+  const fetchRoutes = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport`, { withCredentials: true });
+      setRoutes(res.data);
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to fetch routes', type: 'error' });
+    }
+  };
+
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
   const openAddModal = () => {
-    setForm({ id: null, name: '', bus: '', driver: '', capacity: 40, fee: 150 });
+    setForm({ id: null, routeName: '', vehicleNumber: '', driverName: '', driverPhone: '', capacity: 40, fee: 150 });
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (form.id) {
-      setRoutes(routes.map(r => r.id === form.id ? { ...r, ...form } : r));
-      setToast({ message: 'Route updated successfully', type: 'success' });
-    } else {
-      const newRoute = {
-        id: `R0${routes.length + 1}`,
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport`, {
         ...form,
-        enrolled: 0
-      };
-      setRoutes([...routes, newRoute]);
-      setToast({ message: 'Route added successfully', type: 'success' });
+        routeName: form.routeName || form.name,
+        vehicleNumber: form.vehicleNumber || form.bus,
+        driverName: form.driverName || form.driver,
+      }, { withCredentials: true });
+      setToast({ message: form.id ? 'Route updated successfully' : 'Route added successfully', type: 'success' });
+      setModalOpen(false);
+      fetchRoutes();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to save route', type: 'error' });
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Delete this route?')) return;
-    setRoutes(routes.filter(r => r.id !== id));
-    setToast({ message: 'Route deleted', type: 'success' });
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport/${id}`, { withCredentials: true });
+      setToast({ message: 'Route deleted', type: 'success' });
+      fetchRoutes();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to delete route', type: 'error' });
+    }
   };
 
   const q = search.toLowerCase();
   const filtered = routes.filter(r => 
-    r.name.toLowerCase().includes(q) || r.bus.toLowerCase().includes(q) || r.driver.toLowerCase().includes(q)
+    r.routeName?.toLowerCase().includes(q) || r.vehicleNumber?.toLowerCase().includes(q) || r.driverName?.toLowerCase().includes(q)
   );
 
   return (
@@ -91,7 +107,7 @@ export default function TransportView({ dark }) {
                     style={{ animationDelay: `${i * 0.03}s` }}>
                     <td className="py-3 px-4">
                       <div className="font-bold flex items-center gap-2">
-                        {r.name}
+                        {r.routeName}
                         <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-black ${full ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'}`}>
                           {full ? 'FULL' : 'OPEN'}
                         </span>
@@ -99,8 +115,8 @@ export default function TransportView({ dark }) {
                       <div className={`text-[10px] font-mono mt-0.5 ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{r.id}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold">{r.bus}</div>
-                      <div className={`text-[10px] ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{r.driver}</div>
+                      <div className="font-semibold">{r.vehicleNumber}</div>
+                      <div className={`text-[10px] ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{r.driverName}</div>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="font-mono">{r.enrolled} / {r.capacity}</div>
@@ -126,16 +142,16 @@ export default function TransportView({ dark }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Route Name</label>
-              <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="admin-input w-full" placeholder="e.g. North Hills Route" />
+              <input required type="text" value={form.routeName || form.name || ''} onChange={e => setForm({...form, routeName: e.target.value})} className="admin-input w-full" placeholder="e.g. North Hills Route" />
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Bus Number</label>
-                <input required type="text" value={form.bus} onChange={e => setForm({...form, bus: e.target.value})} className="admin-input w-full" placeholder="e.g. Bus-112" />
+                <input required type="text" value={form.vehicleNumber || form.bus || ''} onChange={e => setForm({...form, vehicleNumber: e.target.value})} className="admin-input w-full" placeholder="e.g. Bus-112" />
               </div>
               <div className="flex-1">
                 <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Driver Name</label>
-                <input required type="text" value={form.driver} onChange={e => setForm({...form, driver: e.target.value})} className="admin-input w-full" />
+                <input required type="text" value={form.driverName || form.driver || ''} onChange={e => setForm({...form, driverName: e.target.value})} className="admin-input w-full" />
               </div>
             </div>
             <div className="flex gap-4">

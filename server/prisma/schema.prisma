@@ -44,6 +44,11 @@ model School {
   auditLogs          AuditLog[]
   documents          Document[]
   notifications      Notification[]
+  books              Book[]
+  labItems           LabItem[]
+  healthRecords      HealthRecord[]
+  transportRoutes    TransportRoute[]
+  certificates       Certificate[]
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
@@ -52,7 +57,6 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
-  plainPassword String?
   role         String   @default("Student")
   name         String?
   phone        String?
@@ -74,6 +78,7 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
   notifications    Notification[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([schoolId])
 }
@@ -605,3 +610,123 @@ model Notification {
   @@index([userId])
   @@index([schoolId])
 }
+
+// ─── Password Reset Token ──────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ─── Library ───────────────────────────────────────────────────────────────────
+
+model Book {
+  id          String   @id @default(uuid())
+  bookId      String   // Unique book identifier e.g. "B001"
+  title       String
+  author      String
+  category    String
+  status      String   @default("Available")
+  
+  issuedTo    String?  // Can store studentId or name temporarily, or relate to User
+  dueDate     DateTime?
+
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([bookId, schoolId])
+  @@index([schoolId])
+}
+
+// ─── Laboratory ────────────────────────────────────────────────────────────────
+
+model LabItem {
+  id          String   @id @default(uuid())
+  itemId      String   // Unique item identifier
+  name        String
+  category    String
+  quantity    Int      @default(0)
+  status      String   @default("Good Condition")
+
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([itemId, schoolId])
+  @@index([schoolId])
+}
+
+// ─── Health Records ────────────────────────────────────────────────────────────
+
+model HealthRecord {
+  id          String   @id @default(uuid())
+  recordId    String
+  studentName String   // Or link to Student model if preferred
+  bloodGroup  String
+  allergies   String?
+  lastCheckup DateTime?
+  notes       String?
+
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([recordId, schoolId])
+  @@index([schoolId])
+}
+
+// ─── Transport ─────────────────────────────────────────────────────────────────
+
+model TransportRoute {
+  id          String   @id @default(uuid())
+  routeId     String
+  name        String
+  bus         String
+  driver      String
+  capacity    Int
+  enrolled    Int      @default(0)
+  fee         Float
+
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([routeId, schoolId])
+  @@index([schoolId])
+}
+
+// ─── Certificates ──────────────────────────────────────────────────────────────
+
+model Certificate {
+  id          String   @id @default(uuid())
+  certId      String
+  studentName String
+  type        String
+  date        DateTime?
+  status      String   @default("Pending")
+
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([certId, schoolId])
+  @@index([schoolId])
+}
+

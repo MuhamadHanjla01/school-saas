@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Modal, Toast } from './AdminUI';
 
-const INITIAL_INVENTORY = [
-  { id: 'LAB-001', item: 'Microscopes (Compound)', category: 'Biology', quantity: 15, status: 'Good Condition' },
-  { id: 'LAB-002', item: 'Bunsen Burners', category: 'Chemistry', quantity: 30, status: 'Needs Replacement (5)' },
-  { id: 'LAB-003', item: 'Oscilloscopes', category: 'Physics', quantity: 8, status: 'Good Condition' },
-  { id: 'LAB-004', item: 'Sulfuric Acid (500ml)', category: 'Chemicals', quantity: 12, status: 'Low Stock' },
-];
-
 export default function LaboratoryView({ dark }) {
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+  const [inventory, setInventory] = useState([]);
   const [search, setSearch] = useState('');
   
   const [toast, setToast] = useState(null);
@@ -17,36 +11,53 @@ export default function LaboratoryView({ dark }) {
   
   const [form, setForm] = useState({ id: null, item: '', category: 'Physics', quantity: 1, status: 'Good Condition' });
 
+  const fetchInventory = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory`, { withCredentials: true });
+      setInventory(res.data);
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to fetch inventory', type: 'error' });
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
   const openAddModal = () => {
-    setForm({ id: null, item: '', category: 'Physics', quantity: 1, status: 'Good Condition' });
+    setForm({ id: null, name: '', category: 'Physics', quantity: 1, status: 'Good Condition' });
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (form.id) {
-      setInventory(inventory.map(r => r.id === form.id ? { ...r, ...form } : r));
-      setToast({ message: 'Item updated successfully', type: 'success' });
-    } else {
-      const newItem = {
-        id: `LAB-00${inventory.length + 1}`,
-        ...form
-      };
-      setInventory([...inventory, newItem]);
-      setToast({ message: 'Item added successfully', type: 'success' });
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory`, form, { withCredentials: true });
+      setToast({ message: form.id ? 'Item updated successfully' : 'Item added successfully', type: 'success' });
+      setModalOpen(false);
+      fetchInventory();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to save item', type: 'error' });
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!confirm('Delete this item?')) return;
-    setInventory(inventory.filter(r => r.id !== id));
-    setToast({ message: 'Item deleted', type: 'success' });
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory/${id}`, { withCredentials: true });
+      setToast({ message: 'Item deleted', type: 'success' });
+      fetchInventory();
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to delete item', type: 'error' });
+    }
   };
 
   const q = search.toLowerCase();
   const filtered = inventory.filter(r => 
-    r.item.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)
+    r.name?.toLowerCase().includes(q) || r.itemId?.toLowerCase().includes(q) || r.category?.toLowerCase().includes(q)
   );
 
   return (
@@ -87,8 +98,8 @@ export default function LaboratoryView({ dark }) {
               ) : filtered.map((r, i) => (
                 <tr key={r.id} className={`admin-row-enter border-b ${dark ? 'border-[#3c4a46]/50 hover:bg-[#3c4a46]/30' : 'border-outline-variant/30 hover:bg-surface-container-low'}`}
                   style={{ animationDelay: `${i * 0.03}s` }}>
-                  <td className="py-3 px-4 font-mono font-semibold">{r.id}</td>
-                  <td className="py-3 px-4 font-bold">{r.item}</td>
+                  <td className="py-3 px-4 font-mono font-semibold">{r.itemId}</td>
+                  <td className="py-3 px-4 font-bold">{r.name}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded text-[10px] ${dark ? 'bg-[#2f3133] text-[#bbcac4]' : 'bg-surface-container-high text-on-surface'}`}>{r.category}</span>
                   </td>
@@ -112,7 +123,7 @@ export default function LaboratoryView({ dark }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className={`block text-[12px] font-semibold mb-1 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>Item Name</label>
-              <input required type="text" value={form.item} onChange={e => setForm({...form, item: e.target.value})} className="admin-input w-full" placeholder="e.g. Bunsen Burner" />
+              <input required type="text" value={form.name || form.item || ''} onChange={e => setForm({...form, name: e.target.value})} className="admin-input w-full" placeholder="e.g. Bunsen Burner" />
             </div>
             <div className="flex gap-4">
               <div className="flex-1">

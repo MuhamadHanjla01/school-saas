@@ -1,74 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-const mockSchoolsData = [
-  {
-    id: 1,
-    name: 'Oakridge Academy',
-    joined: 'Sep 2023',
-    subdomain: 'oakridge.erpzo.com',
-    plan: 'Enterprise',
-    planColor: 'bg-secondary/10 text-secondary',
-    students: '2,450',
-    studentPct: '85%',
-    studentColor: 'bg-primary-container',
-    status: 'Active',
-    statusColor: 'bg-primary-container/10 text-primary',
-    statusDot: 'bg-primary-container',
-    logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCklcU9adoSc_7Gom9dagVN4h_WrQfKjmvtHv94fLEIJHp0u-waKLGOUr1Exfs6O8mQFxbQf-htpuRId_d2GzfC6p1IK62Ec6a5Dgh5i0_7ISNO5iUFS0Sn-9CN4oqwZHnjwi0xl8IP4L1jOvNh9g1IJz5oS-MceovDCBqkJYaphlCzdBCC2-aD7xlU7QaHdV26d4SpLgzM4ITgUEXURLq_68JUZ8qrgdh18xsEscgE0pGBm0Q9cj9t4A'
-  },
-  {
-    id: 2,
-    name: 'Maplewood Prep',
-    joined: 'Jan 2024',
-    subdomain: 'maplewood.erpzo.com',
-    plan: 'Pro',
-    planColor: 'bg-tertiary/10 text-tertiary',
-    students: '850',
-    studentPct: '45%',
-    studentColor: 'bg-tertiary',
-    status: 'Active',
-    statusColor: 'bg-primary-container/10 text-primary',
-    statusDot: 'bg-primary-container',
-    logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBT2cxtEFBmrkFZdDwtMYtuzt0x4kta5TJe3LsVwYW5TK1NVJqTHv_n5g3QQ7K1my48_6SKk15OZgEMXHGPYtSp1kjU9O9cDCToUOeUvYvNR_XAmxQ63T5Js8jqFoolPumcXhTbyCL_7TOWso3olCFk125V2-0gHxL8MbmwgK4OqEoq5FCjdyOXoisyX6E0rFNNjYPUuDkDYXeDUtqjPvnPOPn39FAb2eh_Ssmw_Tbp1fZW3Ft3LFTzqQ'
-  },
-  {
-    id: 3,
-    name: 'Sunrise Valley High',
-    joined: 'Trial started 2 days ago',
-    subdomain: 'sunrise.erpzo.com',
-    plan: 'Trial',
-    planColor: 'bg-surface-variant text-on-surface-variant border border-outline-variant',
-    students: '120',
-    studentPct: '10%',
-    studentColor: 'bg-outline',
-    status: 'Onboarding',
-    statusColor: 'bg-surface-variant text-on-surface-variant',
-    statusDot: 'bg-outline',
-    fallback: 'SV'
-  },
-  {
-    id: 4,
-    name: "St. Jude's Boarding",
-    joined: 'Payment Overdue',
-    subdomain: 'stjudes.erpzo.com',
-    plan: 'Basic',
-    planColor: 'bg-tertiary/10 text-tertiary',
-    students: '450',
-    studentPct: '25%',
-    studentColor: 'bg-surface-variant',
-    status: 'Suspended',
-    statusColor: 'bg-error-container text-on-error-container',
-    statusDot: 'bg-error',
-    logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAcwSyxe0mAkHJz27qNFR-3MjUY9S3XXbpQAIOD3IhSTcb5JqpWgPf3tUpUsAoR7zlik_nrxkiRmY_Z_lJg_syFw6B_D8-nDSI70hDK5Iju_-RMZnb9w0UeUDM15O8y_ldL953yWQb4My47_bnIBTW9uimHeyaigZpK3W9hAZ6g18qb_LwRpCW9iNloqbVrw1LjaFret4rhCW3hdN47kCZSNw1W0SobZS3iVwA3Z882TzG8JsvtdHmVmQ',
-    muted: true
-  }
-];
+import axios from 'axios';
 
 export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSchool }) {
-  const [schools, setSchools] = useState(mockSchoolsData);
+  const [schools, setSchools] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [editingSchool, setEditingSchool] = useState(null);
   const dropdownRef = useRef(null);
+  
+  const fetchSchools = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools`, { withCredentials: true });
+      setSchools(res.data);
+    } catch (error) {
+      console.error('Failed to fetch schools:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchools();
+  }, []);
 
   // Handle clicking outside to close dropdown
   useEffect(() => {
@@ -83,23 +33,38 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
     };
   }, []);
 
-  const handleAction = (action, school) => {
+  const handleAction = async (action, school) => {
     setOpenDropdownId(null);
     if (action === 'suspend') {
-      alert(`Suspending school: ${school.name}`);
+      try {
+        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${school.id}`, { status: 'Suspended' }, { withCredentials: true });
+        fetchSchools();
+      } catch (error) {
+        console.error(error);
+      }
     } else if (action === 'delete') {
       if(window.confirm(`Are you sure you want to delete ${school.name}?`)) {
-        setSchools(schools.filter(s => s.id !== school.id));
+        try {
+          await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${school.id}`, { withCredentials: true });
+          fetchSchools();
+        } catch (error) {
+          console.error(error);
+        }
       }
     } else if (action === 'analytics') {
       alert(`Opening analytics for ${school.name}`);
     }
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setSchools(schools.map(s => s.id === editingSchool.id ? editingSchool : s));
-    setEditingSchool(null);
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${editingSchool.id}`, editingSchool, { withCredentials: true });
+      fetchSchools();
+      setEditingSchool(null);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -206,7 +171,7 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 relative">
-                      <button onClick={() => onViewSchool?.(school.name)} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors" title="View Details">
+                      <button onClick={() => onViewSchool?.(school.id, school.name)} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors" title="View Details">
                         <span className="material-symbols-outlined text-[20px]">visibility</span>
                       </button>
                       <button onClick={() => setEditingSchool({...school})} className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors" title="Edit School">

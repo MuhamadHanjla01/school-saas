@@ -154,7 +154,62 @@ exports.logout = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-  res.json({ message: 'If that email exists, a password reset link has been sent.' });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await dbCall(() => prisma.user.findUnique({ where: { email } }));
+    if (!user) return res.json({ message: 'If that email exists, a password reset link has been sent.' });
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+    await dbCall(() => prisma.passwordResetToken.create({
+      data: {
+        token,
+        expiresAt,
+        userId: user.id
+      }
+    }));
+
+    // TODO: Send email with token here. For now just log it.
+    console.log(`Password reset token for ${email}: ${token}`);
+
+    res.json({ message: 'If that email exists, a password reset link has been sent.' });
+  } catch (error) {
+    console.error('[forgotPassword]', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+
+    const resetToken = await dbCall(() => prisma.passwordResetToken.findUnique({ where: { token } }));
+    if (!resetToken || resetToken.expiresAt < new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await dbCall(() => prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash }
+    }));
+
+    await dbCall(() => prisma.passwordResetToken.deleteMany({
+      where: { userId: resetToken.userId }
+    }));
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('[resetPassword]', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
 // GET /api/auth/me — extended profile
@@ -256,7 +311,7 @@ exports.changePassword = async (req, res) => {
 
     await dbCall(() => prisma.user.update({
       where: { id: req.user.userId },
-      data: { passwordHash, plainPassword: newPassword }
+      data: { passwordHash }
     }));
 
     res.json({ message: 'Password changed successfully' });

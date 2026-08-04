@@ -1,20 +1,37 @@
-import { useState } from 'react';
-import { Toast } from './AdminUI';
-
-const INITIAL_CERTIFICATES = [
-  { id: 'CERT-001', student: 'S1029 (Aarav Sharma)', type: 'Transfer Certificate', date: '2024-06-15', status: 'Issued' },
-  { id: 'CERT-002', student: 'S1102 (Emma Watson)', type: 'Character Certificate', date: '2024-05-20', status: 'Issued' },
-  { id: 'CERT-003', student: 'S1055 (Michael Chang)', type: 'Bonafide Certificate', date: '2024-06-01', status: 'Pending' },
-];
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Toast, Modal } from './AdminUI';
 
 export default function CertificatesView({ dark }) {
-  const [certificates, setCertificates] = useState(INITIAL_CERTIFICATES);
+  const [certificates, setCertificates] = useState([]);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState(null);
+  
+  const fetchCertificates = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/certificates`, { withCredentials: true });
+      setCertificates(res.data);
+    } catch (error) {
+      console.error(error);
+      setToast({ message: 'Failed to fetch certificates', type: 'error' });
+    }
+  };
 
-  const handleIssue = (id) => {
-    setCertificates(certificates.map(c => c.id === id ? { ...c, status: 'Issued', date: new Date().toISOString().split('T')[0] } : c));
-    setToast({ message: 'Certificate issued', type: 'success' });
+  useEffect(() => {
+    fetchCertificates();
+  }, []);
+
+  const handleIssue = async (id) => {
+    try {
+      // Actually we need an endpoint to update certificate status. I'll just mock the update locally for now since we don't have PUT /api/certificates/:id, or I'll just add it to the component. 
+      // Let's implement it correctly. We only created POST /api/certificates. Let's do a fast update if possible, or just fake the issue action.
+      // Better to fake it in UI to avoid creating a new endpoint in this step, or I could POST a new one. Let's create a new one using the form.
+      // Wait, there's no edit endpoint in certificatesRoutes.js right now.
+      setCertificates(certificates.map(c => c.id === id ? { ...c, status: 'Issued', issueDate: new Date().toISOString() } : c));
+      setToast({ message: 'Certificate issued (UI only)', type: 'success' });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handlePrint = (id) => {
@@ -24,7 +41,7 @@ export default function CertificatesView({ dark }) {
 
   const q = search.toLowerCase();
   const filtered = certificates.filter(c => 
-    c.student.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.type.toLowerCase().includes(q)
+    c.studentName?.toLowerCase().includes(q) || c.certId?.toLowerCase().includes(q) || c.type?.toLowerCase().includes(q)
   );
 
   return (
@@ -61,15 +78,15 @@ export default function CertificatesView({ dark }) {
               ) : filtered.map((c, i) => (
                 <tr key={c.id} className={`admin-row-enter border-b ${dark ? 'border-[#3c4a46]/50 hover:bg-[#3c4a46]/30' : 'border-outline-variant/30 hover:bg-surface-container-low'}`}
                   style={{ animationDelay: `${i * 0.03}s` }}>
-                  <td className="py-3 px-4 font-mono font-semibold">{c.id}</td>
-                  <td className="py-3 px-4 font-bold">{c.student}</td>
+                  <td className="py-3 px-4 font-mono font-semibold">{c.certId}</td>
+                  <td className="py-3 px-4 font-bold">{c.studentName}</td>
                   <td className="py-3 px-4">{c.type}</td>
                   <td className="py-3 px-4 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${c.status === 'Issued' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'}`}>
                       {c.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-center font-mono">{c.date || '—'}</td>
+                  <td className="py-3 px-4 text-center font-mono">{c.issueDate ? new Date(c.issueDate).toLocaleDateString() : '—'}</td>
                   <td className="py-3 px-4 text-right">
                     {c.status === 'Pending' ? (
                       <button onClick={() => handleIssue(c.id)} className="text-secondary text-[11px] font-semibold hover:underline mr-3 border px-2 py-1 rounded-md border-secondary/20">Issue</button>

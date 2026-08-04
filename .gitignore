@@ -31,3 +31,4 @@ server/node_modules
 server/.env
 server/prisma/*.db
 server/prisma/*.sqlite
+.vercel
