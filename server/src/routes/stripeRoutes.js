@@ -10,7 +10,7 @@ const { resolveTenant } = require('../middleware/tenantMiddleware');
 router.post('/create-checkout-session', verifyToken, resolveTenant, async (req, res) => {
   try {
     const { feeId, studentId, amount, returnUrl } = req.body;
-    const schoolId = req.tenant.id;
+    const schoolId = req.schoolId;
 
     if (!feeId || !studentId || !amount) {
       return res.status(400).json({ error: 'Missing required parameters' });

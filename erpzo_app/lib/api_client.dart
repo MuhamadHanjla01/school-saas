@@ -25,7 +25,7 @@ class ApiClient {
     required this.baseUrl,
     this.failureThreshold = 5,
     this.cooldownDuration = const Duration(seconds: 15),
-    this.timeout = const Duration(seconds: 10),
+    this.timeout = const Duration(seconds: 60), // Increased from 10s to 60s to account for Render cold starts
     this.maxConcurrency = 6,
   });
 
