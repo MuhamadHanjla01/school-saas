@@ -54,7 +54,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               'latestMessage': msg['content'] ?? '',
               'time': msg['createdAt'],
               'isUnread': false, // No read status in backend yet
-              'role': otherUser['role'],
+              'role': otherUser != null ? otherUser['role'] : 'Unknown',
             };
           }
         }
@@ -63,6 +63,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
           setState(() {
             _conversations = convs.values.toList();
             _filteredConversations = _conversations;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
             _isLoading = false;
           });
         }
@@ -386,6 +392,8 @@ class _NewMessageSheetState extends State<_NewMessageSheet> {
             _isLoading = false;
           });
         }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       debugPrint('Error fetching teachers: $e');

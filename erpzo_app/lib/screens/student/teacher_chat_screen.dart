@@ -93,6 +93,8 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
           });
           _scrollToBottom();
         }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       debugPrint('Error fetching chat messages: $e');

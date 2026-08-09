@@ -112,7 +112,7 @@ app.use('/api/users', verifyToken, resolveTenant, userRoutes);
 app.use('/api/notifications', verifyToken, resolveTenant, notificationRoutes);
 app.use('/api/library', verifyToken, resolveTenant, libraryRoutes);
 app.use('/api/laboratory', verifyToken, resolveTenant, laboratoryRoutes);
-app.use('/api/health', verifyToken, resolveTenant, healthRoutes);
+app.use('/api/health-records', verifyToken, resolveTenant, healthRoutes);
 app.use('/api/transport', verifyToken, resolveTenant, transportRoutes);
 app.use('/api/certificates', verifyToken, resolveTenant, certificateRoutes);
 app.use('/api/reports', verifyToken, resolveTenant, reportRoutes);

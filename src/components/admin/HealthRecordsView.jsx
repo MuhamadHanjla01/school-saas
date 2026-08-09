@@ -13,7 +13,7 @@ export default function HealthRecordsView({ dark }) {
 
   const fetchRecords = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health-records`, { withCredentials: true });
       setRecords(res.data);
     } catch (error) {
       console.error(error);
@@ -33,7 +33,7 @@ export default function HealthRecordsView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health`, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health-records`, {
         ...form,
         studentName: form.studentName || form.student
       }, { withCredentials: true });
@@ -49,7 +49,7 @@ export default function HealthRecordsView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Delete this health record?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health/${id}`, { withCredentials: true });
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/health-records/${id}`, { withCredentials: true });
       setToast({ message: 'Record deleted', type: 'success' });
       fetchRecords();
     } catch (error) {

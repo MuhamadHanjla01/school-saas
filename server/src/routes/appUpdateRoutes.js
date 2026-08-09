@@ -37,7 +37,7 @@ router.get('/latest', async (req, res) => {
 router.get('/', verifyToken, async (req, res) => {
   try {
     // Only superadmin should access this, but we'll check role if needed.
-    if (req.user.role !== 'SUPERADMIN') {
+    if (req.user.role !== 'SuperAdmin' && req.user.role !== 'SUPERADMIN') {
        return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -55,7 +55,7 @@ router.get('/', verifyToken, async (req, res) => {
 // Secure endpoint to release a new version
 router.post('/', verifyToken, async (req, res) => {
   try {
-    if (req.user.role !== 'SUPERADMIN') {
+    if (req.user.role !== 'SuperAdmin' && req.user.role !== 'SUPERADMIN') {
        return res.status(403).json({ error: 'Forbidden' });
     }
 
