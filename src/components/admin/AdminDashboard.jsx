@@ -8,7 +8,7 @@ export default function AdminDashboard({ dark, onNavigate }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('https://school-backend-70ny.onrender.com/api/school/dashboard-stats');
+        const res = await axios.get('https://erpzo-backend.onrender.com/api/school/dashboard-stats');
         setData(res.data);
       } catch (err) {
         console.error('Failed to fetch dashboard stats', err);

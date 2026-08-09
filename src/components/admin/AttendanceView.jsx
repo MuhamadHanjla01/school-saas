@@ -18,7 +18,7 @@ export default function AttendanceView({ dark }) {
 
   const fetchAttendance = async () => {
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/attendance/summary');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/attendance/summary');
       setData(res.data);
     } catch (err) {
       console.error('Failed to fetch attendance summary', err);
@@ -35,7 +35,7 @@ export default function AttendanceView({ dark }) {
     setModalOpen(true);
     if (classes.length === 0) {
       try {
-        const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+        const res = await axios.get('https://erpzo-backend.onrender.com/api/classes');
         setClasses(res.data.classes);
       } catch (err) {
         console.error('Failed to fetch classes', err);
@@ -50,7 +50,7 @@ export default function AttendanceView({ dark }) {
       return;
     }
     try {
-      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/classes/${classId}`);
+      const res = await axios.get(`https://erpzo-backend.onrender.com/api/classes/${classId}`);
       const studs = res.data.class.students || [];
       setStudents(studs);
       
@@ -78,7 +78,7 @@ export default function AttendanceView({ dark }) {
     }));
 
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/attendance', {
+      await axios.post('https://erpzo-backend.onrender.com/api/attendance', {
         records,
         date: selectedDate,
         classId: selectedClass

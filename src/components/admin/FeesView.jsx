@@ -20,7 +20,7 @@ export default function FeesView({ dark }) {
   const fetchSummary = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/fees/summary');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/fees/summary');
       setData(res.data);
     } catch (err) {
       console.error('Failed to fetch fees', err);
@@ -37,7 +37,7 @@ export default function FeesView({ dark }) {
     setModalType('addFee');
     setFeeForm({ name: '', amount: '', dueDate: '', classId: '' });
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/classes');
       setClasses(res.data.classes);
     } catch (err) {
       console.error(err);
@@ -49,8 +49,8 @@ export default function FeesView({ dark }) {
     setPaymentForm({ studentId: '', feeId: '', amount: '', status: 'Paid' });
     try {
       const [resFees, resStudents] = await Promise.all([
-        axios.get('https://school-backend-70ny.onrender.com/api/fees'),
-        axios.get('https://school-backend-70ny.onrender.com/api/students')
+        axios.get('https://erpzo-backend.onrender.com/api/fees'),
+        axios.get('https://erpzo-backend.onrender.com/api/students')
       ]);
       setFeesList(resFees.data.fees);
       setStudents(resStudents.data.students);
@@ -62,7 +62,7 @@ export default function FeesView({ dark }) {
   const handleAddFee = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/fees', feeForm);
+      await axios.post('https://erpzo-backend.onrender.com/api/fees', feeForm);
       setToast({ message: 'Fee structure added', type: 'success' });
       setModalType(null);
       fetchSummary();
@@ -74,7 +74,7 @@ export default function FeesView({ dark }) {
   const handleRecordPayment = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/fees/payments', paymentForm);
+      await axios.post('https://erpzo-backend.onrender.com/api/fees/payments', paymentForm);
       setToast({ message: 'Payment recorded', type: 'success' });
       setModalType(null);
       fetchSummary();

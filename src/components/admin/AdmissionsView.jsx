@@ -15,8 +15,8 @@ export default function AdmissionsView({ dark }) {
     setLoading(true);
     try {
       const [classesRes, studentsRes] = await Promise.all([
-        axios.get('https://school-backend-70ny.onrender.com/api/classes'),
-        axios.get('https://school-backend-70ny.onrender.com/api/students')
+        axios.get('https://erpzo-backend.onrender.com/api/classes'),
+        axios.get('https://erpzo-backend.onrender.com/api/students')
       ]);
       setClasses(classesRes.data.classes || []);
       
@@ -68,7 +68,7 @@ export default function AdmissionsView({ dark }) {
     
     if (window.confirm(`Are you sure you want to permanently delete ${student.name}? This cannot be undone.`)) {
       try {
-        await axios.delete(`https://school-backend-70ny.onrender.com/api/students/${student.id}`);
+        await axios.delete(`https://erpzo-backend.onrender.com/api/students/${student.id}`);
         setToast({ message: 'Student deleted permanently', type: 'success' });
         fetchData();
       } catch (err) {

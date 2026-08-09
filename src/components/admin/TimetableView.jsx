@@ -28,8 +28,8 @@ export default function TimetableView({ dark }) {
     const fetchInitial = async () => {
       try {
         const [resClasses, resTeachers] = await Promise.all([
-          axios.get('https://school-backend-70ny.onrender.com/api/classes'),
-          axios.get('https://school-backend-70ny.onrender.com/api/teachers')
+          axios.get('https://erpzo-backend.onrender.com/api/classes'),
+          axios.get('https://erpzo-backend.onrender.com/api/teachers')
         ]);
         setClasses(resClasses.data.classes);
         setTeachers(resTeachers.data.teachers);
@@ -47,7 +47,7 @@ export default function TimetableView({ dark }) {
     if (!classId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/timetable?classId=${classId}`);
+      const res = await axios.get(`https://erpzo-backend.onrender.com/api/timetable?classId=${classId}`);
       const timetable = res.data.timetable || {};
       
       const periodSet = new Set();
@@ -86,7 +86,7 @@ export default function TimetableView({ dark }) {
       // But we need a subjectId. Let's assume we fetch all subjects or class.subjects if they had IDs.
       // For now, if we don't have a /api/subjects route, we'll need to create it or just assume it exists.
       // Let's call /api/subjects
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/subjects').catch(() => ({ data: { subjects: [] }}));
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/subjects').catch(() => ({ data: { subjects: [] }}));
       setSubjects(res.data.subjects || []);
     } catch (err) {
       console.error(err);
@@ -97,7 +97,7 @@ export default function TimetableView({ dark }) {
   const handleSaveSlot = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/timetable', { ...slotForm, classId: selectedClassId });
+      await axios.post('https://erpzo-backend.onrender.com/api/timetable', { ...slotForm, classId: selectedClassId });
       setToast({ message: 'Timetable slot added', type: 'success' });
       setModalOpen(false);
       fetchTimetable(selectedClassId);
@@ -109,7 +109,7 @@ export default function TimetableView({ dark }) {
   const handleDeleteSlot = async (id) => {
     if (!confirm('Delete this timetable slot?')) return;
     try {
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/timetable/${id}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/timetable/${id}`);
       setToast({ message: 'Slot deleted', type: 'success' });
       fetchTimetable(selectedClassId);
     } catch (err) {

@@ -14,7 +14,7 @@ export default function ClassesView({ dark }) {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/classes');
       setClasses(res.data.classes);
     } catch (err) {
       console.error('Failed to fetch classes', err);
@@ -23,7 +23,7 @@ export default function ClassesView({ dark }) {
 
   const fetchTeachers = async () => {
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
       setTeachers(res.data.teachers);
     } catch (err) {
       console.error('Failed to fetch teachers', err);
@@ -54,10 +54,10 @@ export default function ClassesView({ dark }) {
     e.preventDefault();
     try {
       if (editingClass) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/classes/${editingClass.id}`, formData);
+        await axios.put(`https://erpzo-backend.onrender.com/api/classes/${editingClass.id}`, formData);
         setToast({ message: 'Class updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/classes', formData);
+        await axios.post('https://erpzo-backend.onrender.com/api/classes', formData);
         setToast({ message: 'Class created successfully', type: 'success' });
       }
       setModalOpen(false);

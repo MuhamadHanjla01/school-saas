@@ -91,7 +91,7 @@ export default function TeachersView({ dark }) {
       return;
     }
     try {
-      await axios.put(`https://school-backend-70ny.onrender.com/api/teachers/${promoteForm.teacherId}/promote`, {
+      await axios.put(`https://erpzo-backend.onrender.com/api/teachers/${promoteForm.teacherId}/promote`, {
         classId: promoteForm.classId,
         department: promoteForm.department,
         title: promoteForm.title
@@ -100,7 +100,7 @@ export default function TeachersView({ dark }) {
       setPromoteModalOpen(false);
       setPromoteForm({ teacherId: '', classId: '', department: '', title: '' });
       // Reload teachers to reflect changes
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
       setTeachers(res.data.teachers.map(t => ({
         ...t,
         id_db: t.id,
@@ -119,7 +119,7 @@ export default function TeachersView({ dark }) {
     e.preventDefault();
     if (!resetForm.newPassword) return;
     try {
-      const res = await axios.post(`https://school-backend-70ny.onrender.com/api/teachers/${resetPasswordTeacher.id}/reset-password`, {
+      const res = await axios.post(`https://erpzo-backend.onrender.com/api/teachers/${resetPasswordTeacher.id}/reset-password`, {
         newPassword: resetForm.newPassword,
         oldPassword: resetForm.oldPassword
       });
@@ -148,13 +148,13 @@ export default function TeachersView({ dark }) {
         formData.append('avatar', editForm.avatar);
       }
 
-      await axios.put(`https://school-backend-70ny.onrender.com/api/teachers/${dbId}`, formData);
+      await axios.put(`https://erpzo-backend.onrender.com/api/teachers/${dbId}`, formData);
       
       setToast({ message: `Teacher updated successfully`, type: 'success' });
       setEditTeacher(null);
       
       // Reload teachers
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
       setTeachers(res.data.teachers.map(t => ({
         ...t,
         id_db: t.id,
@@ -172,7 +172,7 @@ export default function TeachersView({ dark }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const resTeachers = await axios.get('https://school-backend-70ny.onrender.com/api/teachers');
+        const resTeachers = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
         if (resTeachers.data?.teachers) {
           const formatted = resTeachers.data.teachers.map(t => ({
             ...t,
@@ -191,7 +191,7 @@ export default function TeachersView({ dark }) {
       }
 
       try {
-        const resClasses = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+        const resClasses = await axios.get('https://erpzo-backend.onrender.com/api/classes');
         setClasses(resClasses.data?.classes || []);
       } catch (err) {
         console.error('Failed to fetch classes', err);

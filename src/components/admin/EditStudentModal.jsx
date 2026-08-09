@@ -69,7 +69,7 @@ export default function EditStudentModal({ student, dark, onClose, onUpdate, set
         }
       });
 
-      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData);
+      await axios.put(`https://erpzo-backend.onrender.com/api/students/${dbId}`, formData);
       
       setToast({ message: 'Student updated successfully', type: 'success' });
       onUpdate();

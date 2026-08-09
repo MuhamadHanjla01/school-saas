@@ -145,7 +145,7 @@ class _AppDrawerState extends State<AppDrawer> {
                             border: Border.all(color: primaryContainer, width: 2),
                             image: DecorationImage(
                               image: _userData != null && _userData!['avatar'] != null 
-                                  ? NetworkImage('https://school-backend-70ny.onrender.com${_userData!['avatar']}') 
+                                  ? NetworkImage('https://erpzo-backend.onrender.com${_userData!['avatar']}') 
                                   : const NetworkImage('https://lh3.googleusercontent.com/aida-public/AB6AXuDxthVtnHUvyZC61rtsLhP74xe_zGLJVf3Ov4ljqyDYCzxFc0SsPJxfpiGN6Eh_94yGTSBnRcfCOY1LwlEZo1g5h-ofMHCyj8Sf0mLMrmliU3Jxe8gdO2BC_6iZXnu9PT-a93A1zroL91g2b_9Z4UiDCeq_dEtsCi5QqA9ryrcvJ_yZbZQqpnAsi4jlsdlojVLremQx101IiUG2CEalvWueFVRFHKqA-ILpw3WLZrJxtPWP0TWvl8AF-da_Ez8OadpLsNwSdxe2Nq6b') as ImageProvider,
                               fit: BoxFit.cover,
                             ),

@@ -11,7 +11,7 @@ class SocketService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   // Use live Render backend URL
-  static const String _serverUrl = 'https://school-backend-70ny.onrender.com';
+  static const String _serverUrl = 'https://erpzo-backend.onrender.com';
 
   factory SocketService() {
     return _instance;

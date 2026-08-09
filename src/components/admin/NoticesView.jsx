@@ -17,7 +17,7 @@ export default function NoticesView({ dark }) {
   const fetchNotices = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/school/notices');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/school/notices');
       setNotices(res.data.notices || []);
     } catch (err) {
       console.error('Failed to fetch notices', err);
@@ -35,7 +35,7 @@ export default function NoticesView({ dark }) {
   const handleDelete = async (noticeId) => {
     if (!confirm('Delete this notice?')) return;
     try {
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/school/notices/${noticeId}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/school/notices/${noticeId}`);
       setToast({ message: 'Notice deleted', type: 'success' });
       fetchNotices();
     } catch (err) {
@@ -51,7 +51,7 @@ export default function NoticesView({ dark }) {
     }
     
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+      await axios.post('https://erpzo-backend.onrender.com/api/school/notices', { ...form, content: finalContent, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
       setToast({ message: 'Notice posted', type: 'success' });
       setModalOpen(false);
       fetchNotices();

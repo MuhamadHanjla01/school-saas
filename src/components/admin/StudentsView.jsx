@@ -87,7 +87,7 @@ export default function StudentsView({ dark }) {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/students');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/students');
       const formatted = res.data.students.map(s => ({
         ...s,
         id_db: s.id,
@@ -107,7 +107,7 @@ export default function StudentsView({ dark }) {
 
   const fetchClasses = async () => {
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/classes');
       setClasses(res.data.classes || []);
     } catch (err) {
       console.error('Failed to fetch classes', err);
@@ -124,7 +124,7 @@ export default function StudentsView({ dark }) {
     if (!resetForm.newPassword) return;
     try {
       const dbId = resetPasswordStudent.id_db || resetPasswordStudent.id;
-      const res = await axios.post(`https://school-backend-70ny.onrender.com/api/students/${dbId}/reset-password`, {
+      const res = await axios.post(`https://erpzo-backend.onrender.com/api/students/${dbId}/reset-password`, {
         newPassword: resetForm.newPassword,
         oldPassword: resetForm.oldPassword
       });
@@ -141,7 +141,7 @@ export default function StudentsView({ dark }) {
     e.preventDefault();
     if (!promoteClassId) return;
     try {
-      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${promoteStudent.id_db || promoteStudent.id}`, { classId: promoteClassId });
+      await axios.put(`https://erpzo-backend.onrender.com/api/students/${promoteStudent.id_db || promoteStudent.id}`, { classId: promoteClassId });
       setToast({ message: `Student promoted successfully`, type: 'success' });
       setPromoteStudent(null);
       setPromoteClassId('');
@@ -167,7 +167,7 @@ export default function StudentsView({ dark }) {
         formData.append('avatar', editForm.avatar);
       }
 
-      await axios.put(`https://school-backend-70ny.onrender.com/api/students/${dbId}`, formData);
+      await axios.put(`https://erpzo-backend.onrender.com/api/students/${dbId}`, formData);
       
       setToast({ message: `Student updated successfully`, type: 'success' });
       setEditStudent(null);
@@ -183,7 +183,7 @@ export default function StudentsView({ dark }) {
     if (!window.confirm(`Are you sure you want to permanently delete ${student.name}? This action cannot be undone.`)) return;
     try {
       const dbId = student.id_db || student.id;
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/students/${dbId}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/students/${dbId}`);
       setToast({ message: 'Student deleted successfully', type: 'success' });
       // Remove from expanded rows if open
       const newExpanded = { ...expandedRows };
@@ -211,7 +211,7 @@ export default function StudentsView({ dark }) {
 
     // Fetch details
     try {
-      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/students/${dbId}`);
+      const res = await axios.get(`https://erpzo-backend.onrender.com/api/students/${dbId}`);
       setExpandedRows(prev => ({ ...prev, [dbId]: { loading: false, data: res.data.student } }));
     } catch (err) {
       console.error(err);

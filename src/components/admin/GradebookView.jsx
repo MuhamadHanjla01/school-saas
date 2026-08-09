@@ -14,7 +14,7 @@ export default function GradebookView({ dark }) {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get('https://school-backend-70ny.onrender.com/api/students');
+        const res = await axios.get('https://erpzo-backend.onrender.com/api/students');
         setStudents(res.data.students || []);
       } catch (err) {
         console.error('Failed to fetch students', err);
@@ -28,7 +28,7 @@ export default function GradebookView({ dark }) {
   const handleGenerateReportCard = async (studentId) => {
     try {
       setToast({ message: 'Generating report card...', type: 'success' });
-      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/exams/report-card/${studentId}`);
+      const res = await axios.get(`https://erpzo-backend.onrender.com/api/exams/report-card/${studentId}`);
       setReportCardData(res.data);
       setReportModalOpen(true);
       setToast(null);

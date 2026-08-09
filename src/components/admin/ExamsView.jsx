@@ -24,7 +24,7 @@ export default function ExamsView({ dark }) {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/exams');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/exams');
       setExams(res.data.exams);
       if (res.data.exams.length > 0) {
         setSelectedExam(res.data.exams[0]);
@@ -39,7 +39,7 @@ export default function ExamsView({ dark }) {
 
   const fetchResultsSummary = async (examId) => {
     try {
-      const resultsRes = await axios.get(`https://school-backend-70ny.onrender.com/api/exams/${examId}/results`);
+      const resultsRes = await axios.get(`https://erpzo-backend.onrender.com/api/exams/${examId}/results`);
       setResultsSummary(resultsRes.data.summary || []);
     } catch (err) {
       console.error(err);
@@ -54,7 +54,7 @@ export default function ExamsView({ dark }) {
     setModalType('scheduleExam');
     setExamForm({ name: '', type: 'Internal', startDate: '', endDate: '', status: 'Scheduled', classIds: [] });
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/classes');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/classes');
       setClasses(res.data.classes);
     } catch (err) {
       console.error(err);
@@ -68,8 +68,8 @@ export default function ExamsView({ dark }) {
     setStudents([]);
     try {
       const [resC, resS] = await Promise.all([
-        axios.get('https://school-backend-70ny.onrender.com/api/classes'),
-        axios.get('https://school-backend-70ny.onrender.com/api/subjects') // Wait, subjects endpoint might not exist yet, we'll fetch from class or just handle it if it doesn't exist
+        axios.get('https://erpzo-backend.onrender.com/api/classes'),
+        axios.get('https://erpzo-backend.onrender.com/api/subjects') // Wait, subjects endpoint might not exist yet, we'll fetch from class or just handle it if it doesn't exist
       ]);
       setClasses(resC.data.classes);
       // For subjects we can extract from the selected class later.
@@ -82,7 +82,7 @@ export default function ExamsView({ dark }) {
     setMarksForm({ ...marksForm, classId });
     if (!classId) return setStudents([]);
     try {
-      const res = await axios.get(`https://school-backend-70ny.onrender.com/api/classes/${classId}`);
+      const res = await axios.get(`https://erpzo-backend.onrender.com/api/classes/${classId}`);
       const studs = res.data.class.students || [];
       setStudents(studs);
       
@@ -102,7 +102,7 @@ export default function ExamsView({ dark }) {
   const handleSaveExam = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/exams', examForm);
+      await axios.post('https://erpzo-backend.onrender.com/api/exams', examForm);
       setToast({ message: 'Exam scheduled', type: 'success' });
       setModalType(null);
       fetchExams();
@@ -125,7 +125,7 @@ export default function ExamsView({ dark }) {
     }));
 
     try {
-      await axios.post(`https://school-backend-70ny.onrender.com/api/exams/${selectedExam.id}/results`, { marks: marksArr });
+      await axios.post(`https://erpzo-backend.onrender.com/api/exams/${selectedExam.id}/results`, { marks: marksArr });
       setToast({ message: 'Marks saved successfully', type: 'success' });
       setModalType(null);
       fetchResultsSummary(selectedExam.id);

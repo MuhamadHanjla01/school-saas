@@ -14,7 +14,7 @@ export default function SubjectsView({ dark }) {
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/subjects');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/subjects');
       setSubjects(res.data.subjects || []);
     } catch (err) {
       console.error('Failed to fetch subjects', err);
@@ -41,10 +41,10 @@ export default function SubjectsView({ dark }) {
     e.preventDefault();
     try {
       if (form.id) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/subjects/${form.id}`, form);
+        await axios.put(`https://erpzo-backend.onrender.com/api/subjects/${form.id}`, form);
         setToast({ message: 'Subject updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/subjects', form);
+        await axios.post('https://erpzo-backend.onrender.com/api/subjects', form);
         setToast({ message: 'Subject added successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -57,7 +57,7 @@ export default function SubjectsView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this subject?')) return;
     try {
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/subjects/${id}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/subjects/${id}`);
       setToast({ message: 'Subject deleted', type: 'success' });
       fetchSubjects();
     } catch (err) {

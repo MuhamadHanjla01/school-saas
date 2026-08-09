@@ -78,7 +78,7 @@ export default function StaffView({ dark }) {
   const fetchStaff = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/staff');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/staff');
       setStaffList(res.data.staff || []);
     } catch (err) {
       console.error('Failed to fetch staff', err);
@@ -96,10 +96,10 @@ export default function StaffView({ dark }) {
     e.preventDefault();
     try {
       if (form.id) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/staff/${form.id}`, form);
+        await axios.put(`https://erpzo-backend.onrender.com/api/staff/${form.id}`, form);
         setToast({ message: 'Staff updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/staff', form);
+        await axios.post('https://erpzo-backend.onrender.com/api/staff', form);
         setToast({ message: 'Staff created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -113,7 +113,7 @@ export default function StaffView({ dark }) {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this staff member?')) return;
     try {
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/staff/${id}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/staff/${id}`);
       setToast({ message: 'Staff deleted', type: 'success' });
       fetchStaff();
     } catch (err) {

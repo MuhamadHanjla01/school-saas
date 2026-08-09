@@ -19,7 +19,7 @@ export default function MyProfileView({ dark }) {
     // Here we will just fetch the first user or mock it.
     const fetchProfile = async () => {
       try {
-        const res = await axios.get('https://school-backend-70ny.onrender.com/api/users');
+        const res = await axios.get('https://erpzo-backend.onrender.com/api/users');
         if (res.data.users && res.data.users.length > 0) {
           const u = res.data.users[0]; // mock current user
           setProfile({

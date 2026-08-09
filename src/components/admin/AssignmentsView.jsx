@@ -20,9 +20,9 @@ export default function AssignmentsView({ dark }) {
     const fetchInitial = async () => {
       try {
         const [resClasses, resSubjects, resTeachers] = await Promise.all([
-          axios.get('https://school-backend-70ny.onrender.com/api/classes'),
-          axios.get('https://school-backend-70ny.onrender.com/api/subjects'),
-          axios.get('https://school-backend-70ny.onrender.com/api/teachers')
+          axios.get('https://erpzo-backend.onrender.com/api/classes'),
+          axios.get('https://erpzo-backend.onrender.com/api/subjects'),
+          axios.get('https://erpzo-backend.onrender.com/api/teachers')
         ]);
         setClasses(resClasses.data.classes || []);
         setSubjects(resSubjects.data.subjects || []);
@@ -37,7 +37,7 @@ export default function AssignmentsView({ dark }) {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://school-backend-70ny.onrender.com/api/assignments');
+      const res = await axios.get('https://erpzo-backend.onrender.com/api/assignments');
       setAssignments(res.data.assignments || []);
     } catch (err) {
       console.error('Failed to fetch assignments', err);
@@ -59,10 +59,10 @@ export default function AssignmentsView({ dark }) {
     e.preventDefault();
     try {
       if (form.id) {
-        await axios.put(`https://school-backend-70ny.onrender.com/api/assignments/${form.id}`, form);
+        await axios.put(`https://erpzo-backend.onrender.com/api/assignments/${form.id}`, form);
         setToast({ message: 'Assignment updated successfully', type: 'success' });
       } else {
-        await axios.post('https://school-backend-70ny.onrender.com/api/assignments', form);
+        await axios.post('https://erpzo-backend.onrender.com/api/assignments', form);
         setToast({ message: 'Assignment created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -75,7 +75,7 @@ export default function AssignmentsView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this assignment?')) return;
     try {
-      await axios.delete(`https://school-backend-70ny.onrender.com/api/assignments/${id}`);
+      await axios.delete(`https://erpzo-backend.onrender.com/api/assignments/${id}`);
       setToast({ message: 'Assignment deleted', type: 'success' });
       fetchAssignments();
     } catch (err) {

@@ -131,7 +131,7 @@ export default function StudentOnboardingWizard({ dark, onClose, classes, onComp
 
     setSubmitting(true);
     try {
-      await axios.post('https://school-backend-70ny.onrender.com/api/students', form);
+      await axios.post('https://erpzo-backend.onrender.com/api/students', form);
       // Clear draft on success
       localStorage.removeItem('studentOnboardingDraft');
       setToast({ message: 'Student onboarded successfully!', type: 'success' });
