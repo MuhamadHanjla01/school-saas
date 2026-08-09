@@ -730,3 +730,13 @@ model Certificate {
   @@index([schoolId])
 }
 
+// ─── App Version ───────────────────────────────────────────────────────────────
+
+model AppVersion {
+  id           String   @id @default(uuid())
+  version      String
+  forceUpdate  Boolean  @default(false)
+  downloadUrl  String
+  releaseNotes String?
+  createdAt    DateTime @default(now())
+}
