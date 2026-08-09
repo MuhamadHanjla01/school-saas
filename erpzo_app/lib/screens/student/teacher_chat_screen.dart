@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../api_client.dart';
 
 class TeacherChatScreen extends StatefulWidget {
@@ -19,6 +20,43 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
   String? _otherUserName;
   String? _currentUserId;
   List<dynamic> _messages = [];
+  IO.Socket? _socket;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectSocket();
+  }
+
+  void _connectSocket() {
+    _socket = IO.io('https://erpzo-backend.onrender.com', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    _socket?.onConnect((_) {
+      debugPrint('Socket connected');
+    });
+
+    _socket?.on('new_message', (data) {
+      if (!mounted) return;
+      if (_otherUserId == null) return;
+      
+      // Only process message if it belongs to this conversation
+      if ((data['senderId'] == _otherUserId && data['receiverId'] == _currentUserId) ||
+          (data['senderId'] == _currentUserId && data['receiverId'] == _otherUserId)) {
+        
+        setState(() {
+          // check if already added by optimistic UI
+          bool exists = _messages.any((m) => m['id'] == data['id']);
+          if (!exists) {
+            _messages.add(data);
+          }
+        });
+        _scrollToBottom();
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -44,7 +82,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
         _currentUserId = userData['id'];
       }
 
-      final res = await apiClient.get('/api/messages?withUser=$_otherUserId');
+      final res = await apiClient.get('/api/school/messages?withUser=$_otherUserId');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -84,7 +122,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
     _scrollToBottom();
 
     try {
-      final res = await apiClient.post('/api/messages', body: {
+      final res = await apiClient.post('/api/school/messages', body: {
         'receiverId': _otherUserId,
         'content': text,
       });
@@ -111,6 +149,8 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
 
   @override
   void dispose() {
+    _socket?.disconnect();
+    _socket?.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

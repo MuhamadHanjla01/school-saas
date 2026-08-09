@@ -26,6 +26,8 @@ const healthRoutes = require('./routes/healthRoutes');
 const transportRoutes = require('./routes/transportRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const stripeRoutes = require('./routes/stripeRoutes');
+const appUpdateRoutes = require('./routes/appUpdateRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const { verifyToken } = require('./middleware/authMiddleware');
 const { resolveTenant } = require('./middleware/tenantMiddleware');
@@ -114,6 +116,8 @@ app.use('/api/health', verifyToken, resolveTenant, healthRoutes);
 app.use('/api/transport', verifyToken, resolveTenant, transportRoutes);
 app.use('/api/certificates', verifyToken, resolveTenant, certificateRoutes);
 app.use('/api/reports', verifyToken, resolveTenant, reportRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/app-update', appUpdateRoutes);
 app.use('/api/superadmin/tenants', verifyToken, tenantRoutes);
 
 // ── Health check ──

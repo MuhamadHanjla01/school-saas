@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       include: {
         subjects: { select: { name: true } },
         classTeacher: { select: { name: true } },
-        user: { select: { plainPassword: true } }
+        user: { select: { id: true, plainPassword: true } }
       },
       orderBy: { name: 'asc' },
     }));

@@ -34,7 +34,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         _currentUserId = userData['id'];
       }
 
-      final res = await apiClient.get('/api/messages');
+      final res = await apiClient.get('/api/school/messages');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final messages = data['messages'] as List<dynamic>? ?? [];
@@ -110,6 +110,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
     } catch (_) {
       return '';
     }
+  }
+
+  void _showNewMessageDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return _NewMessageSheet();
+      },
+    );
   }
 
   @override
@@ -193,6 +204,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showNewMessageDialog,
+        backgroundColor: const Color(0xFF00C2A8),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -341,3 +357,166 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 }
+
+class _NewMessageSheet extends StatefulWidget {
+  @override
+  State<_NewMessageSheet> createState() => _NewMessageSheetState();
+}
+
+class _NewMessageSheetState extends State<_NewMessageSheet> {
+  bool _isLoading = true;
+  List<dynamic> _teachers = [];
+  List<dynamic> _filteredTeachers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeachers();
+  }
+
+  Future<void> _fetchTeachers() async {
+    try {
+      final res = await apiClient.get('/api/teachers');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _teachers = data['teachers'] ?? [];
+            _filteredTeachers = _teachers;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching teachers: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _filter(String query) {
+    if (query.isEmpty) {
+      setState(() => _filteredTeachers = _teachers);
+      return;
+    }
+    setState(() {
+      _filteredTeachers = _teachers.where((t) {
+        final name = (t['name'] ?? '').toString().toLowerCase();
+        final dept = (t['department'] ?? '').toString().toLowerCase();
+        return name.contains(query.toLowerCase()) || dept.contains(query.toLowerCase());
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'New Message',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B2522),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              onChanged: _filter,
+              decoration: InputDecoration(
+                hintText: 'Search teachers...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF6C7A76)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E2E5)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C2A8)))
+                : _filteredTeachers.isEmpty
+                    ? const Center(child: Text('No teachers found.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        itemCount: _filteredTeachers.length,
+                        itemBuilder: (context, index) {
+                          final teacher = _filteredTeachers[index];
+                          final name = teacher['name'] ?? 'Unknown';
+                          final dept = teacher['department'] ?? 'Teacher';
+                          final user = teacher['user'];
+                          final userId = user != null ? user['id'] : null;
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF00C2A8).withOpacity(0.1),
+                              child: Text(
+                                name[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Color(0xFF00C2A8),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1B2522),
+                              ),
+                            ),
+                            subtitle: Text(
+                              dept,
+                              style: const TextStyle(color: Color(0xFF6C7A76)),
+                            ),
+                            onTap: () {
+                              if (userId != null) {
+                                Navigator.pop(context); // Close sheet
+                                Navigator.of(context).pushNamed('/teacher_chat', arguments: {
+                                  'otherUserId': userId,
+                                  'otherUserName': name,
+                                });
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('This teacher has no user account.')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

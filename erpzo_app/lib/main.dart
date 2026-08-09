@@ -48,13 +48,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAppUpdate() async {
     try {
-      final res = await http.get(Uri.parse('https://school-saas-olive.vercel.app/downloads/version.json')).timeout(const Duration(seconds: 5));
+      final res = await http.get(Uri.parse('https://erpzo-backend.onrender.com/api/app-update/latest')).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final latestVersion = data['latest_version'];
         final forceUpdate = data['force_update'] ?? false;
         final downloadUrl = data['download_url'];
         final releaseNotes = data['release_notes'] ?? '';
+
+        if (latestVersion == '0.0.0' || downloadUrl == null || downloadUrl.isEmpty) {
+          // No valid updates available
+          _continueLogin();
+          return;
+        }
 
         final packageInfo = await PackageInfo.fromPlatform();
         final currentVersion = packageInfo.version;

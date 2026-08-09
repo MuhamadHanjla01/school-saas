@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../api_client.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -13,10 +14,11 @@ class TeacherMessagesScreen extends StatefulWidget {
 
 class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  List<dynamic> _messages = [];
   bool _isLoading = true;
-  String _searchQuery = '';
-  
+  List<Map<String, dynamic>> _conversations = [];
+  List<Map<String, dynamic>> _filteredConversations = [];
+  String? _currentUserId;
+
   @override
   void initState() {
     super.initState();
@@ -25,19 +27,88 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
 
   Future<void> _fetchMessages() async {
     try {
+      const storage = FlutterSecureStorage();
+      final userStr = await storage.read(key: 'user_data');
+      if (userStr != null) {
+        final userData = jsonDecode(userStr);
+        _currentUserId = userData['id'];
+      }
+
       final res = await apiClient.get('/api/school/messages');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        setState(() {
-          _messages = data['messages'] as List;
-          _isLoading = false;
-        });
+        final messages = data['messages'] as List<dynamic>? ?? [];
+        
+        // Group by conversation
+        final Map<String, Map<String, dynamic>> convs = {};
+        for (var msg in messages) {
+          final isSender = msg['senderId'] == _currentUserId;
+          final otherUserId = isSender ? msg['receiverId'] : msg['senderId'];
+          final otherUserName = isSender ? msg['receiverName'] : msg['senderName'];
+
+          if (otherUserId != null && !convs.containsKey(otherUserId)) {
+            convs[otherUserId] = {
+              'userId': otherUserId,
+              'name': otherUserName ?? 'Unknown User',
+              'latestMessage': msg['content'] ?? '',
+              'time': msg['createdAt'],
+              'isUnread': false, // No read status in backend yet
+            };
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _conversations = convs.values.toList();
+            _filteredConversations = _conversations;
+            _isLoading = false;
+          });
+        }
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       debugPrint('Error fetching messages: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _filter(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredConversations = _conversations;
+      });
+      return;
+    }
+    setState(() {
+      _filteredConversations = _conversations.where((c) {
+        final name = c['name']?.toString().toLowerCase() ?? '';
+        final content = c['latestMessage']?.toString().toLowerCase() ?? '';
+        final q = query.toLowerCase();
+        return name.contains(q) || content.contains(q);
+      }).toList();
+    });
+  }
+
+  String _formatTime(String? isoStr) {
+    if (isoStr == null) return '';
+    try {
+      final date = DateTime.parse(isoStr).toLocal();
+      final now = DateTime.now();
+      
+      String twoDigits(int n) => n.toString().padLeft(2, '0');
+      
+      if (date.year == now.year && date.month == now.month && date.day == now.day) {
+        final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+        final ampm = date.hour >= 12 ? 'PM' : 'AM';
+        return '$hour:${twoDigits(date.minute)} $ampm';
+      }
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final month = months[date.month - 1];
+      return '$month ${date.day}';
+    } catch (_) {
+      return '';
     }
   }
 
@@ -50,7 +121,6 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
   static const Color onSurfaceVariant = Color(0xFF3C4A46);
   static const Color outlineColor = Color(0xFF6C7A76);
   static const Color surfaceVariant = Color(0xFFE2E2E5);
-
 
   @override
   Widget build(BuildContext context) {
@@ -79,37 +149,27 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
                   children: [
                     _buildSearchBar(),
                     const SizedBox(height: 24),
-                    if (_messages.isEmpty)
+                    if (_filteredConversations.isEmpty)
                       const Center(child: Text("No messages.")),
-                    ..._messages.where((m) {
-                      if (_searchQuery.isEmpty) return true;
-                      final sender = (m['senderName'] ?? '').toString().toLowerCase();
-                      final content = (m['content'] ?? '').toString().toLowerCase();
-                      final query = _searchQuery.toLowerCase();
-                      return sender.contains(query) || content.contains(query);
-                    }).map((m) {
-                      String rawDate = m['createdAt'] ?? '';
-                      String formattedTime = '';
-                      if (rawDate.isNotEmpty) {
-                        try {
-                          final dt = DateTime.parse(rawDate).toLocal();
-                          formattedTime = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-                        } catch (_) {}
-                      }
-                      
-                      String senderName = m['senderName'] ?? 'Unknown';
-                      String initials = senderName.isNotEmpty ? senderName[0].toUpperCase() : '?';
+                    ..._filteredConversations.map((conv) {
+                      final name = conv['name'] as String;
+                      final initials = name.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: _buildMessageItem(
-                          name: senderName,
-                          time: formattedTime,
-                          subject: m['content'] ?? '',
-                          snippet: '',
+                          name: name,
+                          time: _formatTime(conv['time']),
+                          subject: '', // No subject in model
+                          snippet: conv['latestMessage'],
                           initials: initials,
-                          isUnread: !(m['read'] ?? true),
-                          onTap: () {},
+                          isUnread: conv['isUnread'],
+                          onTap: () {
+                            Navigator.of(context).pushNamed('/teacher_chat', arguments: {
+                              'otherUserId': conv['userId'],
+                              'otherUserName': name,
+                            });
+                          },
                         ),
                       );
                     }),
@@ -139,11 +199,7 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
         ],
       ),
       child: TextField(
-        onChanged: (val) {
-          setState(() {
-            _searchQuery = val;
-          });
-        },
+        onChanged: _filter,
         decoration: const InputDecoration(
           hintText: 'Search conversations...',
           hintStyle: TextStyle(
