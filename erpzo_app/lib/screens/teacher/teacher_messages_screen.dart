@@ -128,6 +128,18 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
       key: _scaffoldKey,
       backgroundColor: surfaceColor,
       drawer: const AppDrawer(isTeacher: true, currentRoute: '/teacher_messages'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const _NewMessageSheet(),
+          );
+        },
+        backgroundColor: primaryContainer,
+        child: const Icon(Icons.edit, color: Color(0xFF00493E)),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -354,6 +366,172 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NewMessageSheet extends StatefulWidget {
+  const _NewMessageSheet({super.key});
+
+  @override
+  State<_NewMessageSheet> createState() => _NewMessageSheetState();
+}
+
+class _NewMessageSheetState extends State<_NewMessageSheet> {
+  bool _isLoading = true;
+  List<dynamic> _students = [];
+  List<dynamic> _filteredStudents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudents();
+  }
+
+  Future<void> _fetchStudents() async {
+    try {
+      final res = await apiClient.get('/api/students');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _students = data['students'] ?? [];
+            _filteredStudents = _students;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching students: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _filter(String query) {
+    if (query.isEmpty) {
+      setState(() => _filteredStudents = _students);
+      return;
+    }
+    setState(() {
+      _filteredStudents = _students.where((s) {
+        final name = (s['name'] ?? '').toString().toLowerCase();
+        final email = (s['email'] ?? '').toString().toLowerCase();
+        return name.contains(query.toLowerCase()) || email.contains(query.toLowerCase());
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'New Message',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B2522),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              onChanged: _filter,
+              decoration: InputDecoration(
+                hintText: 'Search students...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF6C7A76)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE2E2E5)),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00C2A8)))
+                : _filteredStudents.isEmpty
+                    ? const Center(child: Text('No students found.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        itemCount: _filteredStudents.length,
+                        itemBuilder: (context, index) {
+                          final student = _filteredStudents[index];
+                          final name = student['name'] ?? 'Unknown';
+                          final className = student['class'] != null ? 'Class ${student['class']['name']}' : 'Student';
+                          final user = student['user'];
+                          final userId = user != null ? user['id'] : null;
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF00C2A8).withOpacity(0.1),
+                              child: Text(
+                                name[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Color(0xFF00C2A8),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1B2522),
+                              ),
+                            ),
+                            subtitle: Text(
+                              className,
+                              style: const TextStyle(color: Color(0xFF6C7A76)),
+                            ),
+                            onTap: () {
+                              if (userId != null) {
+                                Navigator.pop(context); // Close sheet
+                                Navigator.of(context).pushNamed('/teacher_chat', arguments: {
+                                  'otherUserId': userId,
+                                  'otherUserName': name,
+                                });
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('This student has no user account.')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
       ),
     );
   }
