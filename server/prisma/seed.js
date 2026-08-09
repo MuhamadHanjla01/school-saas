@@ -14,7 +14,7 @@ async function main() {
   // ─── School (Tenant Root) ──────────────────────────────────────────────────────
   const school = await prisma.school.upsert({
     where: { slug: 'erpzo-academy' },
-    update: { passwordHash: hash },
+    update: { },
     create: {
       name: 'ERPzo Academy',
       slug: 'erpzo-academy',
@@ -54,7 +54,7 @@ async function main() {
   for (const t of teachersData) {
     const teacher = await prisma.teacher.upsert({
       where: { employeeId: t.employeeId },
-      update: { passwordHash: hash },
+      update: { },
       create: { ...t, schoolId: sid },
     });
     teachers.push(teacher);
@@ -67,7 +67,7 @@ async function main() {
   for (let i = 0; i < teachers.length; i++) {
     await prisma.user.upsert({
       where: { email: teacherEmails[i] },
-      update: { teacherId: teachers[i].id,  schoolId: sid },
+      update: { teacherId: teachers[i].id,  schoolId: sid, passwordHash: hash },
       create: { email: teacherEmails[i], passwordHash: hash,  role: 'Teacher', teacherId: teachers[i].id, schoolId: sid },
     });
   }
@@ -80,7 +80,7 @@ async function main() {
   for (const st of staffData) {
     await prisma.staff.upsert({
       where: { staffId: st.staffId },
-      update: { passwordHash: hash },
+      update: { },
       create: { ...st, schoolId: sid },
     });
   }
@@ -103,7 +103,7 @@ async function main() {
     // Unique on name, schoolId
     const cls = await prisma.class.upsert({
       where: { name_schoolId: { name: c.name, schoolId: sid } },
-      update: { passwordHash: hash },
+      update: { },
       create: { ...c, schoolId: sid },
     });
     classes.push(cls);
@@ -119,7 +119,7 @@ async function main() {
   for (const p of parentsData) {
     const parent = await prisma.parent.upsert({
       where: { parentId: p.parentId },
-      update: { passwordHash: hash },
+      update: { },
       create: { ...p, schoolId: sid },
     });
     parents.push(parent);
@@ -147,7 +147,7 @@ async function main() {
     const parentId = parentIdx !== undefined ? parents[parentIdx].id : null;
     const student = await prisma.student.upsert({
       where: { studentId: data.studentId },
-      update: { passwordHash: hash },
+      update: { },
       create: { ...data, classId: classMap[className].id, schoolId: sid, parentId },
     });
     students.push(student);
@@ -162,7 +162,7 @@ async function main() {
   for (let i = 0; i < students.length; i++) {
     await prisma.user.upsert({
       where: { email: studentEmails[i] },
-      update: { studentId: students[i].id,  schoolId: sid },
+      update: { studentId: students[i].id,  schoolId: sid, passwordHash: hash },
       create: { email: studentEmails[i], passwordHash: hash,  role: 'Student', studentId: students[i].id, schoolId: sid },
     });
   }
@@ -201,7 +201,7 @@ async function main() {
     for (const cn of s.classNames) {
       const sub = await prisma.subject.upsert({
         where: { name_classId: { name: s.name, classId: classMap[cn].id } },
-        update: { passwordHash: hash },
+        update: { },
         create: { name: s.name, teacherId: teachers[s.teacherIdx].id, classId: classMap[cn].id, schoolId: sid },
       });
       subjectRecords.push(sub);
