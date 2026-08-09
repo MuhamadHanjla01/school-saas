@@ -84,7 +84,7 @@ exports.login = async (req, res) => {
       return res.status(503).json({ error: 'Server is busy. Please try again in a moment.' });
     }
     console.error('[login]', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -128,7 +128,7 @@ exports.refresh = async (req, res) => {
       return res.status(503).json({ error: 'Service temporarily unavailable.' });
     }
     console.error('[refresh]', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -149,7 +149,7 @@ exports.logout = async (req, res) => {
       return res.json({ message: 'Logged out (session cleanup pending)' });
     }
     console.error('[logout]', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -179,7 +179,7 @@ exports.forgotPassword = async (req, res) => {
     res.json({ message: 'If that email exists, a password reset link has been sent.' });
   } catch (error) {
     console.error('[forgotPassword]', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -208,7 +208,7 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Password has been reset successfully' });
   } catch (error) {
     console.error('[resetPassword]', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
@@ -231,7 +231,7 @@ exports.me = async (req, res) => {
     if (error.message?.includes('Circuit is OPEN') || error.message?.includes('timed out')) {
       return res.status(503).json({ error: 'Service temporarily unavailable.' });
     }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 };
 
