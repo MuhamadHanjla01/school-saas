@@ -22,21 +22,24 @@ const generateRefreshToken = (user) => {
 exports.login = async (req, res) => {
   try {
     const { email, password, clientType } = req.body;
-    const user = await dbCall(() => prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        student: { include: { class: true } },
-        teacher: true
+        school: true,
+        student: true,
+        teacher: true,
+        parent: true
       }
-    }));
+    });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: `Invalid credentials: User not found for ${email}` });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    
+    if (!validPassword) {
+      return res.status(401).json({ error: `Invalid credentials: Password check failed for ${email}` });
     }
 
     // Check if school is active
