@@ -64,7 +64,7 @@ router.post('/:id/reset-password', checkRole(['SchoolAdmin', 'SuperAdmin']), asy
 
     await dbCall(() => prisma.user.update({
       where: { id: req.params.id },
-      data: { passwordHash, plainPassword: newPassword }
+      data: { passwordHash }
     }));
     res.json({ message: 'Password reset successfully' });
   } catch (error) {

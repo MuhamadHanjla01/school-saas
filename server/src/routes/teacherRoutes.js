@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       include: {
         subjects: { select: { name: true } },
         classTeacher: { select: { name: true } },
-        user: { select: { id: true, plainPassword: true } }
+        user: { select: { id: true } }
       },
       orderBy: { name: 'asc' },
     }));
@@ -121,11 +121,12 @@ router.post('/:id/reset-password', async (req, res) => {
       return res.status(404).json({ error: 'Teacher or associated user not found' });
     }
 
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash(newPassword, 10);
     await dbCall(() => prisma.user.update({
       where: { id: teacher.user.id },
       data: { 
-        passwordHash: newPassword,
-        plainPassword: newPassword 
+        passwordHash: hash
       }
     }));
 

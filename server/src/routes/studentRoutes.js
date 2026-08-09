@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
       where,
       include: { 
         class: { select: { name: true } },
-        user: { select: { plainPassword: true } }
+        user: { select: { id: true } }
       },
       orderBy: { createdAt: 'desc' },
     }));
@@ -144,7 +144,6 @@ router.post('/', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
       data: { 
         email: userEmail, 
         passwordHash: hash, 
-        plainPassword: userPassword,
         role: 'Student', 
         studentId: student.id, 
         schoolId: req.schoolId 
@@ -278,17 +277,17 @@ router.post('/:id/reset-password', checkRole(['SchoolAdmin', 'SuperAdmin']), asy
       const email = `${student.studentId.toLowerCase()}@school.edu`;
       const hash = await bcrypt.hash(passwordToSet, 10);
       await prisma.user.create({
-        data: { email, passwordHash: hash, plainPassword: passwordToSet, role: 'Student', studentId: student.id, schoolId: req.schoolId },
+        data: { email, passwordHash: hash, role: 'Student', studentId: student.id, schoolId: req.schoolId },
       });
       return res.json({ message: 'User account created with new password.', password: passwordToSet });
     }
 
     // Admins can reset directly, oldPassword verification is optional if strictly needed.
-    // For now we just apply the new password and plainPassword
+    // For now we just apply the new password
     const hash = await bcrypt.hash(passwordToSet, 10);
     await dbCall(() => prisma.user.update({
       where: { id: student.user.id },
-      data: { passwordHash: hash, plainPassword: passwordToSet },
+      data: { passwordHash: hash },
     }));
 
     res.json({ message: 'Password reset successfully', password: passwordToSet });
