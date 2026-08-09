@@ -26,9 +26,8 @@ exports.login = async (req, res) => {
       where: { email },
       include: {
         school: true,
-        student: true,
-        teacher: true,
-        parent: true
+        student: { include: { class: true } },
+        teacher: true
       }
     });
 
