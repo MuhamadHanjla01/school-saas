@@ -67,8 +67,8 @@ async function main() {
   for (let i = 0; i < teachers.length; i++) {
     await prisma.user.upsert({
       where: { email: teacherEmails[i] },
-      update: { teacherId: teachers[i].id, plainPassword: 'teacher123', schoolId: sid },
-      create: { email: teacherEmails[i], passwordHash: hash, plainPassword: 'teacher123', role: 'Teacher', teacherId: teachers[i].id, schoolId: sid },
+      update: { teacherId: teachers[i].id,  schoolId: sid },
+      create: { email: teacherEmails[i], passwordHash: hash,  role: 'Teacher', teacherId: teachers[i].id, schoolId: sid },
     });
   }
 
@@ -162,8 +162,8 @@ async function main() {
   for (let i = 0; i < students.length; i++) {
     await prisma.user.upsert({
       where: { email: studentEmails[i] },
-      update: { studentId: students[i].id, plainPassword: 'student123', schoolId: sid },
-      create: { email: studentEmails[i], passwordHash: hash, plainPassword: 'student123', role: 'Student', studentId: students[i].id, schoolId: sid },
+      update: { studentId: students[i].id,  schoolId: sid },
+      create: { email: studentEmails[i], passwordHash: hash,  role: 'Student', studentId: students[i].id, schoolId: sid },
     });
   }
 
