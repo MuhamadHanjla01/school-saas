@@ -204,8 +204,8 @@ router.get('/messages', async (req, res) => {
 
     const formatted = messages.map(m => ({
       ...m,
-      senderName: m.sender.teacher?.name || m.sender.student?.name || m.sender.email,
-      receiverName: m.receiver.teacher?.name || m.receiver.student?.name || m.receiver.email,
+      senderName: m.sender?.teacher?.name || m.sender?.student?.name || m.sender?.email || 'Unknown',
+      receiverName: m.receiver?.teacher?.name || m.receiver?.student?.name || m.receiver?.email || 'Unknown',
     }));
 
     res.json({ messages: formatted });
