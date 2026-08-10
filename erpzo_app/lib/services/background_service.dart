@@ -106,9 +106,9 @@ void onStart(ServiceInstance service) async {
     });
 
     // Listen for incoming messages
-    socket!.on('newMessage', (data) async {
+    socket!.on('new_message', (data) async {
       try {
-        final senderName = data['sender']['name'] ?? 'Someone';
+        final senderName = data['sender']?['name'] ?? data['senderName'] ?? 'Someone';
         final content = data['content'] ?? 'Sent an attachment';
 
         // Show local notification

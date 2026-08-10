@@ -9,10 +9,10 @@ const prisma = new PrismaClient();
 router.get('/latest', async (req, res) => {
   try {
     return res.status(200).json({
-      latest_version: '1.0.13',
+      latest_version: '1.0.14',
       force_update: false,
       download_url: 'https://school-eight-eta.vercel.app/downloads/erpzo-school.apk',
-      release_notes: 'Added WhatsApp-style push notifications for chat messages while the app is in background.',
+      release_notes: 'Fixed background notification listener issue to correctly receive messages when screen is off.',
     });
   } catch (error) {
     console.error('Error fetching latest app version:', error);
