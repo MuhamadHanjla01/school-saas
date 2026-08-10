@@ -146,7 +146,18 @@ class _LoginPageState extends State<LoginPage> {
         },
       );
 
-      final data = jsonDecode(response.body);
+      dynamic data;
+      try {
+        data = jsonDecode(response.body);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Server error (Status: ${response.statusCode}). Please try again.'), backgroundColor: Colors.red),
+          );
+        }
+        setState(() => isLoading = false);
+        return;
+      }
 
       if (response.statusCode == 200) {
         // Enforce role check if backend returns a role
@@ -217,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error. Please try again.'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
