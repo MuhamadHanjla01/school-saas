@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
+import 'services/update_service.dart';
 import 'screens/student/dashboard_screen.dart';
 import 'screens/student/class_routine_screen.dart';
 import 'screens/student/calendar_screen.dart';
@@ -19,6 +17,7 @@ import 'screens/student/teacher_chat_screen.dart';
 import 'screens/student/messages_screen.dart';
 import 'screens/student/report_card_screen.dart';
 import 'screens/student/exams_screen.dart';
+import 'services/socket_service.dart';
 import 'screens/teacher/teacher_dashboard_screen.dart';
 import 'screens/teacher/teacher_schedule_screen.dart';
 import 'screens/teacher/teacher_class_screen.dart';
@@ -47,80 +46,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAppUpdate() async {
-    try {
-      final res = await http.get(Uri.parse('https://erpzo-backend.onrender.com/api/app-update/latest')).timeout(const Duration(seconds: 5));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final latestVersion = data['latest_version'];
-        final forceUpdate = data['force_update'] ?? false;
-        final downloadUrl = data['download_url'];
-        final releaseNotes = data['release_notes'] ?? '';
-
-        if (latestVersion == '0.0.0' || downloadUrl == null || downloadUrl.isEmpty) {
-          // No valid updates available
-          _continueLogin();
-          return;
-        }
-
-        final packageInfo = await PackageInfo.fromPlatform();
-        final currentVersion = packageInfo.version;
-
-        if (_isUpdateAvailable(currentVersion, latestVersion)) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: !forceUpdate,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Update Available'),
-                content: Text('A new version ($latestVersion) is available.\n\n$releaseNotes'),
-                actions: [
-                  if (!forceUpdate)
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        _continueLogin();
-                      },
-                      child: const Text('Later'),
-                    ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final url = Uri.parse(downloadUrl);
-                      try {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        debugPrint('Could not launch $url');
-                      }
-                    },
-                    child: const Text('Update Now'),
-                  ),
-                ],
-              ),
-            );
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      debugPrint('Update check failed: $e');
+    final updateShown = await UpdateService.checkForUpdates(context);
+    
+    // If an update dialog was NOT shown, or it was shown but we aren't halted,
+    // we continue login. (If forceUpdate is true, UpdateService should handle blocking UI)
+    if (!updateShown) {
+      _continueLogin();
+    } else {
+      // If the dialog is shown and it's not forced, the user might hit "Later".
+      // We can hook into the dialog pop, but for simplicity, if it returns true,
+      // it means a dialog is on screen. The user can restart the app or we can
+      // just not automatically navigate away.
     }
-    _continueLogin();
-  }
-
-  bool _isUpdateAvailable(String current, String latest) {
-    try {
-      String cleanVersion(String v) => v.split('+').first.split('-').first;
-      final cParts = cleanVersion(current).split('.').map(int.parse).toList();
-      final lParts = cleanVersion(latest).split('.').map(int.parse).toList();
-      for (int i = 0; i < 3; i++) {
-        if (lParts.length <= i) break;
-        if (cParts.length <= i) return true;
-        if (lParts[i] > cParts[i]) return true;
-        if (lParts[i] < cParts[i]) return false;
-      }
-    } catch (e) {
-      debugPrint('Version parse error: $e');
-    }
-    return false;
   }
 
   Future<void> _checkLoginStatus() async {
@@ -699,6 +636,7 @@ class _LoginPageState extends State<LoginPage> {
 void main() {
   runApp(
     MaterialApp(
+      navigatorKey: SocketService.navigatorKey,
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {

@@ -215,6 +215,58 @@ router.get('/messages', async (req, res) => {
   }
 });
 
+// GET /api/messages/unread-count — get unread message count for current user
+router.get('/messages/unread-count', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const count = await dbCall(() => prisma.message.count({
+      where: {
+        schoolId: req.schoolId,
+        receiverId: userId,
+        read: false,
+      },
+    }));
+    res.json({ unreadCount: count });
+  } catch (error) {
+    console.error('[messages] unread-count error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch unread count' });
+  }
+});
+
+// PUT /api/messages/read — mark messages as read for a conversation
+router.put('/messages/read', async (req, res) => {
+  try {
+    const { senderId } = req.body;
+    const userId = req.user.userId;
+
+    if (!senderId) return res.status(400).json({ error: 'senderId required' });
+
+    const result = await dbCall(() => prisma.message.updateMany({
+      where: {
+        schoolId: req.schoolId,
+        senderId: senderId,
+        receiverId: userId,
+        read: false,
+      },
+      data: { read: true },
+    }));
+
+    // Notify the sender that their messages have been read
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('messages_read', {
+        readBy: userId,
+        senderId: senderId,
+      });
+    }
+
+    res.json({ success: true, updatedCount: result.count });
+  } catch (error) {
+    console.error('[messages] mark-read error:', error.message);
+    res.status(500).json({ error: 'Failed to mark messages as read' });
+  }
+});
+
 // POST /api/messages — send message
 router.post('/messages', async (req, res) => {
   try {
@@ -225,11 +277,18 @@ router.post('/messages', async (req, res) => {
       data: { senderId: req.user.userId, receiverId, content, schoolId: req.schoolId },
     });
 
-    const senderUser = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: { teacher: true, student: true }
-    });
+    const [senderUser, receiverUser] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.user.userId },
+        include: { teacher: true, student: true }
+      }),
+      prisma.user.findUnique({
+        where: { id: receiverId },
+        include: { teacher: true, student: true }
+      }),
+    ]);
     const senderName = senderUser?.teacher?.name || senderUser?.student?.name || senderUser?.email || 'Someone';
+    const receiverName = receiverUser?.teacher?.name || receiverUser?.student?.name || receiverUser?.email || 'Unknown';
 
     await prisma.notification.create({
       data: {
@@ -246,6 +305,7 @@ router.post('/messages', async (req, res) => {
       io.emit('new_message', {
         ...message,
         senderName,
+        receiverName,
       });
     }
 

@@ -1,30 +1,36 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:http/http.dart' as http;
 
 class UpdateService {
-  // Update this to your live Vercel URL
-  static const String updateJsonUrl = 'https://school-saas-olive.vercel.app/downloads/version.json';
+  static const String updateJsonUrl = 'https://erpzo-backend.onrender.com/api/app-update/latest';
 
-  static Future<void> checkForUpdates(BuildContext context) async {
+  /// Returns true if an update dialog was shown, meaning the caller (like splash screen)
+  /// should halt navigation if the update is forced.
+  static Future<bool> checkForUpdates(BuildContext context) async {
     try {
-      final response = await http.get(Uri.parse(updateJsonUrl));
+      final response = await http.get(Uri.parse(updateJsonUrl)).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final latestVersion = data['latest_version'] as String;
-        final downloadUrl = data['download_url'] as String;
-        final releaseNotes = data['release_notes'] as String;
-        final forceUpdate = data['force_update'] as bool;
+        final latestVersion = data['latest_version'] as String? ?? '0.0.0';
+        final downloadUrl = data['download_url'] as String?;
+        final releaseNotes = data['release_notes'] as String? ?? '';
+        final forceUpdate = data['force_update'] as bool? ?? false;
+
+        if (latestVersion == '0.0.0' || downloadUrl == null || downloadUrl.isEmpty) {
+          return false; // No valid updates available
+        }
 
         final packageInfo = await PackageInfo.fromPlatform();
         final currentVersion = packageInfo.version;
 
         if (_isUpdateAvailable(currentVersion, latestVersion)) {
-          Future.delayed(const Duration(milliseconds: 500), () {
+          if (context.mounted) {
+            // Show the dialog immediately, no delayed future
             _showUpdateDialog(
               context, 
               latestVersion, 
@@ -32,25 +38,32 @@ class UpdateService {
               releaseNotes, 
               forceUpdate
             );
-          });
+            return true; // We showed an update dialog
+          }
         }
       }
     } catch (e) {
-      print('Error checking for updates: $e');
+      debugPrint('Error checking for updates: $e');
     }
+    return false;
   }
 
   static bool _isUpdateAvailable(String currentVersion, String latestVersion) {
-    List<String> currentParts = currentVersion.split('.');
-    List<String> latestParts = latestVersion.split('.');
-
-    for (int i = 0; i < currentParts.length && i < latestParts.length; i++) {
-      int current = int.tryParse(currentParts[i]) ?? 0;
-      int latest = int.tryParse(latestParts[i]) ?? 0;
-      if (latest > current) return true;
-      if (latest < current) return false;
+    try {
+      String cleanVersion(String v) => v.split('+').first.split('-').first;
+      final cParts = cleanVersion(currentVersion).split('.').map(int.parse).toList();
+      final lParts = cleanVersion(latestVersion).split('.').map(int.parse).toList();
+      
+      for (int i = 0; i < 3; i++) {
+        if (lParts.length <= i) break;
+        if (cParts.length <= i) return true;
+        if (lParts[i] > cParts[i]) return true;
+        if (lParts[i] < cParts[i]) return false;
+      }
+    } catch (e) {
+      debugPrint('Version parse error: $e');
     }
-    return latestParts.length > currentParts.length;
+    return false;
   }
 
   static void _showUpdateDialog(
@@ -149,7 +162,7 @@ class _UpdateDialogWidgetState extends State<_UpdateDialogWidget> {
         _status = 'Failed to download update.';
         _isDownloading = false;
       });
-      print('Download error: $e');
+      debugPrint('Download error: $e');
     }
   }
 
@@ -180,7 +193,15 @@ class _UpdateDialogWidgetState extends State<_UpdateDialogWidget> {
         actions: [
           if (!widget.forceUpdate && !_isDownloading)
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+                // If it's not a forced update and they tap 'Later', 
+                // we probably need to push them to the next screen if they were on splash.
+                // But the caller won't know they dismissed it if they just pop.
+                // Splash screen might need a way to be notified, but a simple 
+                // fix is just restarting the app logic or relying on the user to manually trigger.
+                // However, the cleanest way is just to let the splash screen continue if it's not forced.
+              },
               child: const Text('Later'),
             ),
           if (!_isDownloading)

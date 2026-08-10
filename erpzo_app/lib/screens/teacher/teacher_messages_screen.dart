@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../api_client.dart';
+import '../../services/socket_service.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_app_bar.dart';
 
@@ -12,7 +13,7 @@ class TeacherMessagesScreen extends StatefulWidget {
   State<TeacherMessagesScreen> createState() => _TeacherMessagesScreenState();
 }
 
-class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
+class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoading = true;
   List<Map<String, dynamic>> _conversations = [];
@@ -22,7 +23,33 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchMessages();
+    _listenForNewMessages();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    SocketService().off('new_message');
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchMessages();
+    }
+  }
+
+  void _listenForNewMessages() {
+    SocketService().on('new_message', (data) {
+      if (!mounted || _currentUserId == null) return;
+      // Only refresh if this message involves the current user
+      if (data['senderId'] == _currentUserId || data['receiverId'] == _currentUserId) {
+        _fetchMessages();
+      }
+    });
   }
 
   Future<void> _fetchMessages() async {
@@ -39,7 +66,7 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
         final data = jsonDecode(res.body);
         final messages = data['messages'] as List<dynamic>? ?? [];
         
-        // Group by conversation
+        // Group by conversation - keep latest message per conversation
         final Map<String, Map<String, dynamic>> convs = {};
         for (var msg in messages) {
           final isSender = msg['senderId'] == _currentUserId;
@@ -47,12 +74,20 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
           final otherUserName = isSender ? msg['receiverName'] : msg['senderName'];
 
           if (otherUserId != null && !convs.containsKey(otherUserId)) {
+            // Count unread: messages sent TO me by this user that are not read
+            final unreadCount = messages.where((m) =>
+              m['senderId'] == otherUserId &&
+              m['receiverId'] == _currentUserId &&
+              m['read'] == false
+            ).length;
+
             convs[otherUserId] = {
               'userId': otherUserId,
               'name': otherUserName ?? 'Unknown User',
               'latestMessage': msg['content'] ?? '',
               'time': msg['createdAt'],
-              'isUnread': false, // No read status in backend yet
+              'isUnread': unreadCount > 0,
+              'unreadCount': unreadCount,
             };
           }
         }
@@ -153,41 +188,48 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
             Expanded(
               child: _isLoading 
                 ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildSearchBar(),
-                    const SizedBox(height: 24),
-                    if (_filteredConversations.isEmpty)
-                      const Center(child: Text("No messages.")),
-                    ..._filteredConversations.map((conv) {
-                      final name = conv['name'] as String;
-                      final initials = name.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
+                : RefreshIndicator(
+                    color: primaryContainer,
+                    onRefresh: _fetchMessages,
+                    child: _filteredConversations.isEmpty
+                      ? ListView(
+                          children: const [
+                            SizedBox(height: 120),
+                            Center(child: Text("No messages.")),
+                          ],
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          children: [
+                            _buildSearchBar(),
+                            const SizedBox(height: 24),
+                            ..._filteredConversations.map((conv) {
+                              final name = conv['name'] as String;
+                              final initials = name.split(' ').where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: _buildMessageItem(
-                          name: name,
-                          time: _formatTime(conv['time']),
-                          subject: '', // No subject in model
-                          snippet: conv['latestMessage'],
-                          initials: initials,
-                          isUnread: conv['isUnread'],
-                          onTap: () {
-                            Navigator.of(context).pushNamed('/teacher_chat', arguments: {
-                              'otherUserId': conv['userId'],
-                              'otherUserName': name,
-                            });
-                          },
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: _buildMessageItem(
+                                  name: name,
+                                  time: _formatTime(conv['time']),
+                                  subject: '',
+                                  snippet: conv['latestMessage'],
+                                  initials: initials,
+                                  isUnread: conv['isUnread'] ?? false,
+                                  unreadCount: conv['unreadCount'] ?? 0,
+                                  onTap: () {
+                                    Navigator.of(context).pushNamed('/teacher_chat', arguments: {
+                                      'otherUserId': conv['userId'],
+                                      'otherUserName': name,
+                                    }).then((_) => _fetchMessages()); // Refresh on return
+                                  },
+                                ),
+                              );
+                            }),
+                          ],
                         ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
+                  ),
             ),
           ],
         ),
@@ -204,7 +246,7 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
         border: Border.all(color: surfaceVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha(10),
             blurRadius: 16,
             offset: const Offset(0, 4),
           )
@@ -235,6 +277,7 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
     String? initials,
     Color? initialsColor,
     bool isUnread = false,
+    int unreadCount = 0,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -246,11 +289,11 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
           color: surfaceContainerLowest,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isUnread ? primaryContainer.withOpacity(0.2) : Colors.transparent,
+            color: isUnread ? primaryContainer.withAlpha(50) : Colors.transparent,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withAlpha(10),
               blurRadius: 16,
               offset: const Offset(0, 4),
             )
@@ -289,17 +332,24 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
                         )
                       : null,
                 ),
-                if (isUnread)
+                if (isUnread && unreadCount > 0)
                   Positioned(
-                    top: -2,
-                    right: -2,
+                    top: -4,
+                    right: -4,
                     child: Container(
-                      width: 16,
-                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: primaryContainer,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: surfaceContainerLowest, width: 2),
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Color(0xFF00493E),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -318,9 +368,9 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
                       Expanded(
                         child: Text(
                           name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
                             color: onSurface,
                           ),
                           maxLines: 1,
@@ -338,23 +388,26 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subject,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
-                      color: isUnread ? onSurface : onSurfaceVariant,
+                  if (subject.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subject,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
+                        color: isUnread ? onSurface : onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
                   if (snippet.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       snippet,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
+                        fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
                         color: onSurfaceVariant,
                       ),
                       maxLines: 1,
@@ -494,7 +547,7 @@ class _NewMessageSheetState extends State<_NewMessageSheet> {
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(
-                              backgroundColor: const Color(0xFF00C2A8).withOpacity(0.1),
+                              backgroundColor: const Color(0xFF00C2A8).withAlpha(25),
                               child: Text(
                                 name[0].toUpperCase(),
                                 style: const TextStyle(

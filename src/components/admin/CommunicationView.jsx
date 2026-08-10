@@ -1,6 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 import { Toast } from './AdminUI';
+
+function getCurrentUserId() {
+  try {
+    const token = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('token='))
+      ?.split('=')[1];
+    
+    if (!token) {
+      // Try localStorage as fallback
+      const stored = localStorage.getItem('token');
+      if (stored) {
+        const decoded = jwtDecode(stored);
+        return decoded.userId || decoded.id || null;
+      }
+      return null;
+    }
+    const decoded = jwtDecode(token);
+    return decoded.userId || decoded.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export default function CommunicationView({ dark }) {
   const [messages, setMessages] = useState([]);
@@ -9,10 +33,12 @@ export default function CommunicationView({ dark }) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [content, setContent] = useState('');
   const [toast, setToast] = useState(null);
+  const [currentUserId] = useState(() => getCurrentUserId());
   
   const messagesEndRef = useRef(null);
+  const pollIntervalRef = useRef(null);
 
-  const fetchMessages = async (userId = '') => {
+  const fetchMessages = useCallback(async (userId = '') => {
     try {
       setLoading(true);
       const url = userId ? `https://erpzo-backend.onrender.com/api/school/messages?withUser=${userId}` : 'https://erpzo-backend.onrender.com/api/school/messages';
@@ -24,7 +50,7 @@ export default function CommunicationView({ dark }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -45,14 +71,24 @@ export default function CommunicationView({ dark }) {
   useEffect(() => {
     fetchUsers();
     fetchMessages();
-  }, []);
+  }, [fetchMessages]);
 
   useEffect(() => {
     fetchMessages(selectedUserId);
-  }, [selectedUserId]);
+  }, [selectedUserId, fetchMessages]);
+
+  // Poll for new messages every 5 seconds (lightweight fallback for admin web)
+  useEffect(() => {
+    pollIntervalRef.current = setInterval(() => {
+      fetchMessages(selectedUserId);
+    }, 5000);
+    return () => clearInterval(pollIntervalRef.current);
+  }, [selectedUserId, fetchMessages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleSend = async (e) => {
@@ -94,13 +130,15 @@ export default function CommunicationView({ dark }) {
           ) : messages.length === 0 ? (
             <div className="py-8 text-center text-outline">No messages found.</div>
           ) : (
-            messages.map((m, i) => {
-              // The API returns senderName and receiverName.
-              // We don't have the logged-in user's userId explicitly unless we decode token, but we can guess it: 
-              // If selectedUserId matches receiver, then we are sender.
-              // Better: Check if senderId matches selectedUserId. If yes, it's incoming. Else, it's outgoing (since we filtered by withUser).
-              // For "All Messages", we just show who it's from and to.
-              const isOutgoing = selectedUserId ? m.receiverId === selectedUserId : false;
+            messages.map((m) => {
+              // Determine direction using the actual admin userId
+              let isOutgoing = false;
+              if (currentUserId) {
+                isOutgoing = m.senderId === currentUserId;
+              } else if (selectedUserId) {
+                // Fallback: if we can't decode JWT, use the old heuristic
+                isOutgoing = m.receiverId === selectedUserId;
+              }
 
               return (
                 <div key={m.id} className={`flex flex-col ${isOutgoing ? 'items-end' : 'items-start'}`}>
@@ -112,7 +150,14 @@ export default function CommunicationView({ dark }) {
                     )}
                     <div className="text-[13px]" style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
                   </div>
-                  <span className={`text-[10px] mt-1 ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{formatDate(m.createdAt)}</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className={`text-[10px] ${dark ? 'text-[#8b9896]' : 'text-outline'}`}>{formatDate(m.createdAt)}</span>
+                    {isOutgoing && (
+                      <span className={`text-[10px] ${m.read ? (dark ? 'text-[#00C2A8]' : 'text-primary') : (dark ? 'text-[#8b9896]' : 'text-outline')}`}>
+                        {m.read ? '✓✓' : '✓'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })

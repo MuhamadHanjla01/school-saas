@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../api_client.dart';
+import '../../services/socket_service.dart';
+
+/// Global variable to track which conversation is currently active.
+/// SocketService checks this to suppress notifications for the active chat.
+String? activeChatUserId;
 
 class TeacherChatScreen extends StatefulWidget {
   const TeacherChatScreen({super.key});
@@ -20,42 +24,55 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
   String? _otherUserName;
   String? _currentUserId;
   List<dynamic> _messages = [];
-  IO.Socket? _socket;
 
   @override
   void initState() {
     super.initState();
-    _connectSocket();
+    _setupSocketListener();
   }
 
-  void _connectSocket() {
-    _socket = IO.io('https://erpzo-backend.onrender.com', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': true,
-    });
+  void _setupSocketListener() {
+    final socketService = SocketService();
+    socketService.on('new_message', _onNewMessage);
+    socketService.on('messages_read', _onMessagesRead);
+  }
 
-    _socket?.onConnect((_) {
-      debugPrint('Socket connected');
-    });
-
-    _socket?.on('new_message', (data) {
-      if (!mounted) return;
-      if (_otherUserId == null) return;
+  void _onNewMessage(dynamic data) {
+    if (!mounted) return;
+    if (_otherUserId == null) return;
+    
+    // Only process message if it belongs to this conversation
+    if ((data['senderId'] == _otherUserId && data['receiverId'] == _currentUserId) ||
+        (data['senderId'] == _currentUserId && data['receiverId'] == _otherUserId)) {
       
-      // Only process message if it belongs to this conversation
-      if ((data['senderId'] == _otherUserId && data['receiverId'] == _currentUserId) ||
-          (data['senderId'] == _currentUserId && data['receiverId'] == _otherUserId)) {
-        
-        setState(() {
-          // check if already added by optimistic UI
-          bool exists = _messages.any((m) => m['id'] == data['id']);
-          if (!exists) {
-            _messages.add(data);
-          }
-        });
-        _scrollToBottom();
+      setState(() {
+        // check if already added by optimistic UI
+        bool exists = _messages.any((m) => m['id'] == data['id']);
+        if (!exists) {
+          _messages.add(data);
+        }
+      });
+      _scrollToBottom();
+
+      // If I received a message, mark it as read immediately
+      if (data['senderId'] == _otherUserId) {
+        _markMessagesAsRead();
       }
-    });
+    }
+  }
+
+  void _onMessagesRead(dynamic data) {
+    if (!mounted) return;
+    // The other user read my messages
+    if (data['readBy'] == _otherUserId && data['senderId'] == _currentUserId) {
+      setState(() {
+        for (var msg in _messages) {
+          if (msg['senderId'] == _currentUserId) {
+            msg['read'] = true;
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -66,6 +83,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
       if (args != null) {
         _otherUserId = args['otherUserId'];
         _otherUserName = args['otherUserName'];
+        activeChatUserId = _otherUserId; // Suppress notifications for this chat
         _fetchMessages();
       }
     }
@@ -92,6 +110,9 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
             _isLoading = false;
           });
           _scrollToBottom();
+
+          // Mark messages from the other user as read
+          _markMessagesAsRead();
         }
       } else {
         if (mounted) setState(() => _isLoading = false);
@@ -106,6 +127,17 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
     }
   }
 
+  Future<void> _markMessagesAsRead() async {
+    if (_otherUserId == null) return;
+    try {
+      await apiClient.put('/api/school/messages/read', body: {
+        'senderId': _otherUserId,
+      });
+    } catch (e) {
+      debugPrint('Error marking messages as read: $e');
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _otherUserId == null) return;
@@ -117,6 +149,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
       'senderId': _currentUserId,
       'content': text,
       'createdAt': DateTime.now().toIso8601String(),
+      'read': false,
     };
     setState(() {
       _messages.add(tempMsg);
@@ -151,8 +184,9 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
 
   @override
   void dispose() {
-    _socket?.disconnect();
-    _socket?.dispose();
+    activeChatUserId = null; // Re-enable notifications
+    SocketService().off('new_message');
+    SocketService().off('messages_read');
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -190,6 +224,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                       final msg = _messages[index];
                       final isMine = msg['senderId'] == _currentUserId;
                       final timeStr = _formatTime(msg['createdAt']);
+                      final isRead = msg['read'] == true;
                       
                       if (isMine) {
                         return Padding(
@@ -197,7 +232,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                           child: _buildOutgoingMessage(
                             text: msg['content'] ?? '',
                             time: timeStr,
-                            isRead: false, // Not tracked in backend yet
+                            isRead: isRead,
                           ),
                         );
                       } else {
