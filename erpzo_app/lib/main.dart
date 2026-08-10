@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'services/update_service.dart';
+import 'services/background_service.dart';
 import 'screens/student/dashboard_screen.dart';
 import 'screens/student/class_routine_screen.dart';
 import 'screens/student/calendar_screen.dart';
@@ -185,6 +188,14 @@ class _LoginPageState extends State<LoginPage> {
         if (data['user'] != null) {
           await _storage.write(key: 'user_data', value: jsonEncode(data['user']));
         }
+        
+        // Setup background service
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token_bg', data['accessToken']);
+        
+        final service = FlutterBackgroundService();
+        service.startService();
+        service.invoke('updateToken', {'token': data['accessToken']});
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -645,7 +656,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeBackgroundService();
   runApp(
     MaterialApp(
       navigatorKey: SocketService.navigatorKey,

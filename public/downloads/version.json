@@ -1,6 +1,6 @@
 {
-  "latest_version": "1.0.10",
+  "latest_version": "1.0.13",
   "download_url": "https://school-saas-olive.vercel.app/downloads/erpzo-school.apk",
   "force_update": false,
-  "release_notes": "Added Profile Avatar Upload! You can now tap your profile picture to upload a custom avatar."
+  "release_notes": "Added WhatsApp-style push notifications for chat messages while the app is in background."
 }

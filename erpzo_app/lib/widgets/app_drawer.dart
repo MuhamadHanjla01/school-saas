@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import '../services/socket_service.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -382,6 +384,13 @@ class _AppDrawerState extends State<AppDrawer> {
                       await _storage.delete(key: 'jwt_token');
                       await _storage.delete(key: 'refresh_token');
                       await _storage.delete(key: 'user_data');
+                      
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.remove('jwt_token_bg');
+                      
+                      final service = FlutterBackgroundService();
+                      service.invoke('stopService');
+                      
                       if (context.mounted) {
                         Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                       }
