@@ -8,24 +8,11 @@ const prisma = new PrismaClient();
 // Public endpoint for mobile app to check for updates
 router.get('/latest', async (req, res) => {
   try {
-    const latestVersion = await prisma.appVersion.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!latestVersion) {
-      return res.status(200).json({
-        latest_version: '0.0.0',
-        force_update: false,
-        download_url: '',
-        release_notes: 'No updates available',
-      });
-    }
-
-    res.status(200).json({
-      latest_version: latestVersion.version,
-      force_update: latestVersion.forceUpdate,
-      download_url: latestVersion.downloadUrl,
-      release_notes: latestVersion.releaseNotes,
+    return res.status(200).json({
+      latest_version: '1.0.13',
+      force_update: false,
+      download_url: 'https://school-eight-eta.vercel.app/downloads/erpzo-school.apk',
+      release_notes: 'Added WhatsApp-style push notifications for chat messages while the app is in background.',
     });
   } catch (error) {
     console.error('Error fetching latest app version:', error);
