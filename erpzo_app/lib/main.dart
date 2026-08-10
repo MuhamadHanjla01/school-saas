@@ -144,6 +144,7 @@ class _LoginPageState extends State<LoginPage> {
           'clientType': 'app', // Enforces platform restriction!
           'role': isStudent ? 'student' : 'teacher'
         },
+        requireAuth: false, // Prevents "Session Expired" error from appearing for bad passwords
       );
 
       dynamic data;

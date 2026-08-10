@@ -67,43 +67,47 @@ class ApiClient {
   }
 
   /// GET request
-  Future<http.Response> get(String path, {Map<String, String>? headers}) async {
-    return _executeWithAuth(() async {
-      final mergedHeaders = await _getAuthHeaders(headers);
+  Future<http.Response> get(String path, {Map<String, String>? headers, bool requireAuth = true}) async {
+    final requestFn = () async {
+      final mergedHeaders = requireAuth ? await _getAuthHeaders(headers) : headers;
       return http.get(Uri.parse('$baseUrl$path'), headers: mergedHeaders);
-    });
+    };
+    return requireAuth ? _executeWithAuth(requestFn) : _execute(requestFn);
   }
 
   /// POST request
-  Future<http.Response> post(String path, {Map<String, String>? headers, Object? body}) async {
-    return _executeWithAuth(() async {
-      final mergedHeaders = await _getAuthHeaders(headers);
+  Future<http.Response> post(String path, {Map<String, String>? headers, Object? body, bool requireAuth = true}) async {
+    final requestFn = () async {
+      final mergedHeaders = requireAuth ? await _getAuthHeaders(headers) : (headers ?? {'Content-Type': 'application/json'});
       return http.post(
         Uri.parse('$baseUrl$path'),
         headers: mergedHeaders,
         body: body is String ? body : jsonEncode(body),
       );
-    });
+    };
+    return requireAuth ? _executeWithAuth(requestFn) : _execute(requestFn);
   }
 
   /// PUT request
-  Future<http.Response> put(String path, {Map<String, String>? headers, Object? body}) async {
-    return _executeWithAuth(() async {
-      final mergedHeaders = await _getAuthHeaders(headers);
+  Future<http.Response> put(String path, {Map<String, String>? headers, Object? body, bool requireAuth = true}) async {
+    final requestFn = () async {
+      final mergedHeaders = requireAuth ? await _getAuthHeaders(headers) : (headers ?? {'Content-Type': 'application/json'});
       return http.put(
         Uri.parse('$baseUrl$path'),
         headers: mergedHeaders,
         body: body is String ? body : jsonEncode(body),
       );
-    });
+    };
+    return requireAuth ? _executeWithAuth(requestFn) : _execute(requestFn);
   }
 
   /// DELETE request
-  Future<http.Response> delete(String path, {Map<String, String>? headers}) async {
-    return _executeWithAuth(() async {
-      final mergedHeaders = await _getAuthHeaders(headers);
+  Future<http.Response> delete(String path, {Map<String, String>? headers, bool requireAuth = true}) async {
+    final requestFn = () async {
+      final mergedHeaders = requireAuth ? await _getAuthHeaders(headers) : headers;
       return http.delete(Uri.parse('$baseUrl$path'), headers: mergedHeaders);
-    });
+    };
+    return requireAuth ? _executeWithAuth(requestFn) : _execute(requestFn);
   }
 
   /// Executes request with automatic token refresh on 401
