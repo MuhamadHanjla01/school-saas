@@ -60,11 +60,29 @@ io.userSockets = userSockets;
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
   
-  // Client sends 'join' with their userId after connecting
+  // Auto-join room if auth header is present (background service sends JWT)
+  try {
+    const authHeader = socket.handshake?.headers?.authorization 
+      || socket.handshake?.auth?.token;
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET);
+      if (decoded.userId) {
+        socket.userId = decoded.userId;
+        socket.join(`user_${decoded.userId}`);
+        console.log(`Auto-joined user ${decoded.userId} to room user_${decoded.userId}`);
+      }
+    }
+  } catch (e) {
+    // Token invalid or missing — client can still manually join
+    console.log(`Socket ${socket.id} connected without valid auth`);
+  }
+
+  // Client can also manually send 'join' with their userId
   socket.on('join', (userId) => {
     if (!userId) return;
     socket.userId = userId;
-    // Join a room named after the userId for easy targeted emit
     socket.join(`user_${userId}`);
     console.log(`User ${userId} joined room user_${userId}`);
   });
