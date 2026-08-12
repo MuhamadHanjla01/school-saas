@@ -302,13 +302,12 @@ router.post('/messages', async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      const messagePayload = {
+      // Only emit to receiver — sender uses optimistic UI updates
+      io.to(`user_${receiverId}`).emit('new_message', {
         ...message,
         senderName,
         receiverName,
-      };
-      // Emit to receiver's room (for notifications) and sender's room (for chat UI sync)
-      io.to(`user_${receiverId}`).to(`user_${req.user.userId}`).emit('new_message', messagePayload);
+      });
     }
 
     res.status(201).json({ message });
