@@ -115,9 +115,7 @@ app.use(cors({
   origin: true, // You may want to restrict this in production (e.g., origin: process.env.VITE_API_URL || 'http://localhost:5173')
   credentials: true
 }));
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(helmet()); // Add security headers
 app.use(express.json());
 app.use(cookieParser());
 

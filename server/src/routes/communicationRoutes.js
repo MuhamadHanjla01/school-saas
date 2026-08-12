@@ -3,28 +3,6 @@ const router = express.Router();
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure message uploads directory exists
-const msgUploadDir = path.join(__dirname, '../../public/uploads/messages');
-if (!fs.existsSync(msgUploadDir)) {
-  fs.mkdirSync(msgUploadDir, { recursive: true });
-}
-
-const msgStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, msgUploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname || '') || '.jpg';
-    cb(null, 'msg-' + uniqueSuffix + ext);
-  }
-});
-const msgUpload = multer({
-  storage: msgStorage,
-  limits: { fileSize: 15 * 1024 * 1024 } // 15MB max
-});
 
 // ─── Notices ───────────────────────────────────────────────────────────────────
 
@@ -69,24 +47,15 @@ router.post('/notices', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, re
     });
 
     if (targetUsers.length > 0) {
-      const notifData = targetUsers.map(u => ({
-        title: `New Notice: ${title}`,
-        message: content,
-        type: 'Notice',
-        userId: u.id,
-        schoolId: req.schoolId,
-      }));
-
       await prisma.notification.createMany({
-        data: notifData,
+        data: targetUsers.map(u => ({
+          title: `New Notice: ${title}`,
+          message: content,
+          type: 'Notice',
+          userId: u.id,
+          schoolId: req.schoolId,
+        })),
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        notifData.forEach(n => {
-          io.to(`user_${n.userId}`).emit('new_notification', n);
-        });
-      }
     }
 
     // Emit real-time event to all connected clients
@@ -298,32 +267,14 @@ router.put('/messages/read', async (req, res) => {
   }
 });
 
-// POST /api/messages/upload-image — upload image for a message
-router.post('/messages/upload-image', msgUpload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No image file provided' });
-    const imageUrl = `/uploads/messages/${req.file.filename}`;
-    res.json({ imageUrl });
-  } catch (error) {
-    console.error('[messages] upload-image error:', error.message);
-    res.status(500).json({ error: 'Failed to upload image' });
-  }
-});
-
-// POST /api/messages — send message (text and/or image)
+// POST /api/messages — send message
 router.post('/messages', async (req, res) => {
   try {
-    const { receiverId, content, imageUrl } = req.body;
-    if (!receiverId || (!content && !imageUrl)) return res.status(400).json({ error: 'receiverId and content or imageUrl required' });
+    const { receiverId, content } = req.body;
+    if (!receiverId || !content) return res.status(400).json({ error: 'receiverId and content required' });
 
     const message = await prisma.message.create({
-      data: {
-        senderId: req.user.userId,
-        receiverId,
-        content: content || '',
-        imageUrl: imageUrl || null,
-        schoolId: req.schoolId,
-      },
+      data: { senderId: req.user.userId, receiverId, content, schoolId: req.schoolId },
     });
 
     const [senderUser, receiverUser] = await Promise.all([
@@ -339,11 +290,10 @@ router.post('/messages', async (req, res) => {
     const senderName = senderUser?.teacher?.name || senderUser?.student?.name || senderUser?.email || 'Someone';
     const receiverName = receiverUser?.teacher?.name || receiverUser?.student?.name || receiverUser?.email || 'Unknown';
 
-    const notifMessage = imageUrl ? (content ? `📷 ${content}` : '📷 Sent an image') : content;
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         title: `Message from ${senderName}`,
-        message: notifMessage,
+        message: content,
         type: 'Message',
         userId: receiverId,
         schoolId: req.schoolId,
@@ -352,13 +302,13 @@ router.post('/messages', async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      // Only emit to receiver — sender uses optimistic UI updates
-      io.to(`user_${receiverId}`).emit('new_message', {
+      const messagePayload = {
         ...message,
         senderName,
         receiverName,
-      });
-      io.to(`user_${receiverId}`).emit('new_notification', notification);
+      };
+      // Emit ONLY to receiver's room — sender never receives their own message socket event
+      io.to(`user_${receiverId}`).emit('new_message', messagePayload);
     }
 
     res.status(201).json({ message });

@@ -34,19 +34,14 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/notifications/read
-// Mark specific, list, or all notifications as read
+// Mark specific or all notifications as read
 router.post('/read', async (req, res) => {
   try {
     const schoolId = req.schoolId;
     const userId = req.user.userId;
-    const { notificationId, notificationIds } = req.body;
+    const { notificationId } = req.body;
 
-    if (Array.isArray(notificationIds) && notificationIds.length > 0) {
-      await dbCall(() => prisma.notification.updateMany({
-        where: { id: { in: notificationIds }, schoolId, userId },
-        data: { isRead: true },
-      }));
-    } else if (notificationId) {
+    if (notificationId) {
       await dbCall(() => prisma.notification.updateMany({
         where: { id: notificationId, schoolId, userId },
         data: { isRead: true },
@@ -63,23 +58,6 @@ router.post('/read', async (req, res) => {
   } catch (error) {
     console.error('[notifications] Mark Read error:', error.message);
     res.status(500).json({ error: 'Failed to update notification status' });
-  }
-});
-
-// DELETE /api/notifications — clear all notifications for user
-router.delete('/', async (req, res) => {
-  try {
-    const schoolId = req.schoolId;
-    const userId = req.user.userId;
-
-    await dbCall(() => prisma.notification.deleteMany({
-      where: { schoolId, userId },
-    }));
-
-    res.json({ success: true, message: 'All notifications cleared' });
-  } catch (error) {
-    console.error('[notifications] DELETE error:', error.message);
-    res.status(500).json({ error: 'Failed to clear notifications' });
   }
 });
 

@@ -69,13 +69,6 @@ router.post('/', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']), async (req
       await prisma.notification.createMany({
         data: notifications,
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        notifications.forEach(n => {
-          io.to(`user_${n.userId}`).emit('new_notification', n);
-        });
-      }
     }
 
     res.status(201).json({ assignment });

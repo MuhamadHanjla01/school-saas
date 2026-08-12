@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -38,7 +39,30 @@ class SocketService {
   SocketService._internal();
 
   Future<void> initSocket() async {
-    if (socket != null && socket!.connected) return;
+    const storage = FlutterSecureStorage();
+    final token = await storage.read(key: 'jwt_token');
+    final userStr = await storage.read(key: 'user_data');
+
+    String? currentUserId;
+    if (userStr != null) {
+      try {
+        final userData = jsonDecode(userStr);
+        currentUserId = userData['id']?.toString();
+      } catch (_) {}
+    }
+    if (currentUserId == null && token != null) {
+      try {
+        final decoded = JwtDecoder.decode(token);
+        currentUserId = decoded['userId']?.toString();
+      } catch (_) {}
+    }
+
+    if (socket != null && socket!.connected) {
+      if (currentUserId != null) {
+        socket!.emit('join', currentUserId);
+      }
+      return;
+    }
 
     // Request notification permissions
     if (await Permission.notification.isDenied) {
@@ -82,22 +106,17 @@ class SocketService {
     socket = IO.io(_serverUrl, IO.OptionBuilder()
       .setTransports(['websocket'])
       .disableAutoConnect()
+      .setExtraHeaders(token != null ? {'Authorization': 'Bearer $token'} : {})
       .build()
     );
 
     socket!.connect();
 
     socket!.onConnect((_) async {
-      debugPrint('Socket connected: ${socket!.id}');
-      // Join user-specific room for targeted message delivery
-      final storage = const FlutterSecureStorage();
-      final userStr = await storage.read(key: 'user_data');
-      if (userStr != null) {
-        final userData = jsonDecode(userStr);
-        final userId = userData['id'];
-        if (userId != null) {
-          socket!.emit('join', userId);
-        }
+      debugPrint('Foreground Socket connected: ${socket!.id}');
+      if (currentUserId != null) {
+        socket!.emit('join', currentUserId);
+        debugPrint('Foreground Socket joined room for user: $currentUserId');
       }
     });
 
@@ -114,46 +133,34 @@ class SocketService {
       _showNoticeNotification(data);
     });
 
-    // Listen for general school notifications (assignments, fees, etc.)
-    socket!.on('new_notification', (data) {
-      if (data['type'] != 'Message') {
-        _showGeneralNotification(data);
-      }
-    });
-
     // Listen for new messages — WhatsApp-style push notification
     socket!.on('new_message', (data) async {
-      final storage = const FlutterSecureStorage();
-      final userStr = await storage.read(key: 'user_data');
-      if (userStr != null) {
-        final userData = jsonDecode(userStr);
-        final currentUserId = userData['id'];
-        
-        // Only show notification if:
-        // 1. The message is for the current user
-        // 2. The user is NOT currently viewing this chat
-        if (data['receiverId'] == currentUserId) {
-          final senderId = data['senderId'];
-          
-          // Suppress notification if user is already in the chat with this sender
-          if (activeChatUserId == senderId) {
-            debugPrint('Suppressing notification — user is in this chat');
-            return;
-          }
-          
-          final content = data['content'] as String? ?? '';
-          final imageUrl = data['imageUrl'] as String?;
-          final displayBody = content.isNotEmpty 
-              ? content 
-              : (imageUrl != null ? '📷 Sent a photo' : 'Sent an attachment');
+      final senderId = data['senderId']?.toString();
+      final receiverId = data['receiverId']?.toString();
 
-          _showMessageNotification(
-            senderId: senderId ?? '',
-            senderName: data['senderName'] ?? 'Someone',
-            messageContent: displayBody,
-          );
-        }
+      // 1. NEVER show notification if I am the sender
+      if (currentUserId != null && senderId == currentUserId) {
+        debugPrint('Foreground Socket: Ignored notification for self-sent message from $senderId');
+        return;
       }
+
+      // 2. Only show notification if message is addressed to me
+      if (currentUserId != null && receiverId != null && receiverId != currentUserId) {
+        debugPrint('Foreground Socket: Ignored message for another user: $receiverId');
+        return;
+      }
+
+      // 3. Suppress notification if user is already actively chatting with this sender
+      if (activeChatUserId != null && activeChatUserId == senderId) {
+        debugPrint('Foreground Socket: Suppressing notification — user is currently viewing this chat');
+        return;
+      }
+
+      _showMessageNotification(
+        senderId: senderId ?? '',
+        senderName: data['senderName'] ?? 'Someone',
+        messageContent: data['content'] ?? 'You received a new message.',
+      );
     });
   }
 
@@ -257,42 +264,13 @@ class SocketService {
     );
   }
 
-  /// General notification with distinct styling (Assignments, Fees, etc.)
-  Future<void> _showGeneralNotification(dynamic data) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      _noticeChannelId,
-      _noticeChannelName,
-      channelDescription: _noticeChannelDesc,
-      importance: Importance.high,
-      priority: Priority.high,
-      ticker: 'New notification',
-      category: AndroidNotificationCategory.status,
-      autoCancel: true,
-    );
-    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
-    
-    final title = data['title'] ?? 'Notification';
-    final body = data['message'] ?? '';
-    final type = (data['type'] ?? 'General').toString();
-    
-    await _localNotifications.show(
-      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title: title,
-      body: body,
-      notificationDetails: platformDetails,
-      payload: jsonEncode({
-        'type': type.toLowerCase(),
-      }),
-    );
-  }
-
   /// Handle notification tap — navigate to the appropriate screen
   static void _onNotificationTap(NotificationResponse response) {
     if (response.payload == null) return;
     
     try {
       final data = jsonDecode(response.payload!);
-      final type = (data['type'] ?? '').toString().toLowerCase();
+      final type = data['type'];
       
       if (type == 'message') {
         final senderId = data['senderId'];
@@ -305,13 +283,8 @@ class SocketService {
             'otherUserName': senderName,
           },
         );
-      } else if (type == 'assignment') {
-        navigatorKey.currentState?.pushNamed('/assignments');
-      } else if (type == 'notice') {
-        navigatorKey.currentState?.pushNamed('/notices');
-      } else {
-        navigatorKey.currentState?.pushNamed('/notifications');
       }
+      // For notices, just open the app (it will show dashboard)
     } catch (e) {
       debugPrint('Error handling notification tap: $e');
     }

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -92,9 +93,19 @@ void onStart(ServiceInstance service) async {
       socket!.disconnect();
     }
     
-    // Read current user ID to filter out own messages
-    SharedPreferences p = await SharedPreferences.getInstance();
-    final currentUserId = p.getString('user_id');
+    // Extract current user ID directly from JWT token for 100% reliability
+    String? currentUserId;
+    try {
+      final decoded = JwtDecoder.decode(token);
+      currentUserId = decoded['userId']?.toString();
+    } catch (e) {
+      print('Background Service JWT decode error: $e');
+    }
+    
+    if (currentUserId == null) {
+      SharedPreferences p = await SharedPreferences.getInstance();
+      currentUserId = p.getString('user_id');
+    }
     
     socket = IO.io('https://erpzo-backend.onrender.com', IO.OptionBuilder()
       .setTransports(['websocket'])
@@ -116,9 +127,18 @@ void onStart(ServiceInstance service) async {
     // Listen for incoming messages
     socket!.on('new_message', (data) async {
       try {
-        // Skip notification if the current user is the sender
         final senderId = data['senderId']?.toString();
-        if (senderId != null && senderId == currentUserId) {
+        final receiverId = data['receiverId']?.toString();
+
+        // 1. NEVER show notification if I am the sender
+        if (currentUserId != null && senderId == currentUserId) {
+          print('Background service: ignored self-sent message from $senderId');
+          return;
+        }
+
+        // 2. Only show notification if the message is explicitly for me
+        if (currentUserId != null && receiverId != null && receiverId != currentUserId) {
+          print('Background service: ignored message intended for $receiverId (current: $currentUserId)');
           return;
         }
 
