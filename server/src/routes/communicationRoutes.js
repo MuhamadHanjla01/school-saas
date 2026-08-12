@@ -17,19 +17,13 @@ const msgStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, msgUploadDir),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'msg-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = path.extname(file.originalname || '') || '.jpg';
+    cb(null, 'msg-' + uniqueSuffix + ext);
   }
 });
 const msgUpload = multer({
   storage: msgStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-  fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowed.test(file.mimetype.split('/')[1]);
-    if (ext && mime) return cb(null, true);
-    cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
-  }
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB max
 });
 
 // ─── Notices ───────────────────────────────────────────────────────────────────

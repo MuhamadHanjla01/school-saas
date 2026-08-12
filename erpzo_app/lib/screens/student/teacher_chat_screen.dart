@@ -150,7 +150,9 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
     
     // Optimistic UI update
     final tempMsg = {
+      'id': 'temp_${DateTime.now().millisecondsSinceEpoch}',
       'senderId': _currentUserId,
+      'receiverId': _otherUserId,
       'content': text,
       'imageUrl': imageUrl,
       'createdAt': DateTime.now().toIso8601String(),
@@ -167,9 +169,18 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
         'content': text,
         if (imageUrl != null) 'imageUrl': imageUrl,
       });
-      if (res.statusCode != 201) {
-        // Handle failure if needed
-        _fetchMessages(); // refresh to ensure consistency
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        if (data['message'] != null && mounted) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m['id'] == tempMsg['id']);
+            if (idx != -1) {
+              _messages[idx] = data['message'];
+            }
+          });
+        }
+      } else {
+        _fetchMessages();
       }
     } catch (e) {
       debugPrint('Error sending message: $e');
@@ -178,7 +189,12 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: source, imageQuality: 70);
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
       if (pickedFile == null) return;
 
       setState(() {
@@ -188,29 +204,41 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
       const storage = FlutterSecureStorage();
       final token = await storage.read(key: 'jwt_token');
 
-      var request = http.MultipartRequest('POST', Uri.parse('${apiClient.baseUrl}/api/school/messages/upload-image'));
+      final uri = Uri.parse('${apiClient.baseUrl}/api/school/messages/upload-image');
+      final request = http.MultipartRequest('POST', uri);
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      request.files.add(await http.MultipartFile.fromPath('image', pickedFile.path));
+      
+      request.files.add(await http.MultipartFile.fromPath(
+        'image',
+        pickedFile.path,
+        filename: pickedFile.name,
+      ));
 
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final imageUrl = data['imageUrl'];
-        
-        await _sendMessage(imageUrl: imageUrl);
+        if (imageUrl != null) {
+          await _sendMessage(imageUrl: imageUrl);
+        }
       } else {
+        debugPrint('Upload image error: status ${response.statusCode}, body: ${response.body}');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload image (Status: ${response.statusCode})')),
+          );
         }
       }
     } catch (e) {
       debugPrint('Error uploading image: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error uploading image')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error uploading image: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -399,15 +427,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (imageUrl != null && imageUrl.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    '${apiClient.baseUrl}$imageUrl',
-                    width: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
-                  ),
-                ),
+                _buildChatImage(imageUrl),
                 if (text.isNotEmpty) const SizedBox(height: 8),
               ],
               if (text.isNotEmpty)
@@ -475,15 +495,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (imageUrl != null && imageUrl.isNotEmpty) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      '${apiClient.baseUrl}$imageUrl',
-                      width: 200,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white),
-                    ),
-                  ),
+                  _buildChatImage(imageUrl, isOutgoing: true),
                   if (text.isNotEmpty) const SizedBox(height: 8),
                 ],
                 if (text.isNotEmpty)
@@ -518,6 +530,63 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChatImage(String imageUrl, {bool isOutgoing = false}) {
+    final fullUrl = imageUrl.startsWith('http') ? imageUrl : '${apiClient.baseUrl}$imageUrl';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 240,
+          maxHeight: 280,
+        ),
+        color: isOutgoing ? Colors.black.withAlpha(20) : Colors.grey.withAlpha(30),
+        child: Image.network(
+          fullUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            final total = loadingProgress.expectedTotalBytes;
+            final loaded = loadingProgress.cumulativeBytesLoaded;
+            return SizedBox(
+              width: 180,
+              height: 140,
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: total != null ? loaded / total : null,
+                  color: isOutgoing ? Colors.white : const Color(0xFF00C2A8),
+                  strokeWidth: 2,
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => Container(
+            width: 180,
+            height: 100,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image,
+                  color: isOutgoing ? Colors.white70 : Colors.black45,
+                  size: 28,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Image unavailable',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isOutgoing ? Colors.white70 : Colors.black45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

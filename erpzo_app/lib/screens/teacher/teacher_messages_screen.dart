@@ -81,10 +81,13 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> with Widg
               m['read'] == false
             ).length;
 
+            final content = (msg['content'] as String?)?.trim() ?? '';
+            final snippet = content.isNotEmpty ? content : (msg['imageUrl'] != null ? '📷 Photo' : '');
+
             convs[otherUserId] = {
               'userId': otherUserId,
               'name': otherUserName ?? 'Unknown User',
-              'latestMessage': msg['content'] ?? '',
+              'latestMessage': snippet,
               'time': msg['createdAt'],
               'isUnread': unreadCount > 0,
               'unreadCount': unreadCount,
