@@ -192,6 +192,10 @@ class _LoginPageState extends State<LoginPage> {
         // Setup background service
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token_bg', data['accessToken']);
+        // Store user ID so background service can filter out own messages
+        if (data['user']?['id'] != null) {
+          await prefs.setString('user_id', data['user']['id'].toString());
+        }
         
         final service = FlutterBackgroundService();
         service.startService();

@@ -302,7 +302,8 @@ router.post('/messages', async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('new_message', {
+      // Emit only to the receiver's room, not to everyone
+      io.to(`user_${receiverId}`).emit('new_message', {
         ...message,
         senderName,
         receiverName,

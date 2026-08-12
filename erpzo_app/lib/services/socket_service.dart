@@ -87,8 +87,18 @@ class SocketService {
 
     socket!.connect();
 
-    socket!.onConnect((_) {
+    socket!.onConnect((_) async {
       debugPrint('Socket connected: ${socket!.id}');
+      // Join user-specific room for targeted message delivery
+      final storage = const FlutterSecureStorage();
+      final userStr = await storage.read(key: 'user_data');
+      if (userStr != null) {
+        final userData = jsonDecode(userStr);
+        final userId = userData['id'];
+        if (userId != null) {
+          socket!.emit('join', userId);
+        }
+      }
     });
 
     socket!.onDisconnect((_) {

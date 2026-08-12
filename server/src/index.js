@@ -53,9 +53,22 @@ const io = new Server(server, {
 // Make io globally available to routes
 app.set('io', io);
 
+// Track userId -> Set<socketId> mapping for targeted messaging
+const userSockets = new Map();
+io.userSockets = userSockets;
+
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
   
+  // Client sends 'join' with their userId after connecting
+  socket.on('join', (userId) => {
+    if (!userId) return;
+    socket.userId = userId;
+    // Join a room named after the userId for easy targeted emit
+    socket.join(`user_${userId}`);
+    console.log(`User ${userId} joined room user_${userId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });

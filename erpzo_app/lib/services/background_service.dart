@@ -87,10 +87,14 @@ void onStart(ServiceInstance service) async {
   IO.Socket? socket;
   String? currentToken;
 
-  void connectSocket(String token) {
+  void connectSocket(String token) async {
     if (socket != null && socket!.connected) {
       socket!.disconnect();
     }
+    
+    // Read current user ID to filter out own messages
+    SharedPreferences p = await SharedPreferences.getInstance();
+    final currentUserId = p.getString('user_id');
     
     socket = IO.io('https://erpzo-backend.onrender.com', IO.OptionBuilder()
       .setTransports(['websocket'])
@@ -103,11 +107,21 @@ void onStart(ServiceInstance service) async {
 
     socket!.onConnect((_) {
       print('Background Socket connected: ${socket!.id}');
+      // Join the user's room so the server can target messages
+      if (currentUserId != null) {
+        socket!.emit('join', currentUserId);
+      }
     });
 
     // Listen for incoming messages
     socket!.on('new_message', (data) async {
       try {
+        // Skip notification if the current user is the sender
+        final senderId = data['senderId']?.toString();
+        if (senderId != null && senderId == currentUserId) {
+          return;
+        }
+
         final senderName = data['sender']?['name'] ?? data['senderName'] ?? 'Someone';
         final content = data['content'] ?? 'Sent an attachment';
 
