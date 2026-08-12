@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import '../../api_client.dart';
 import '../../services/socket_service.dart';
 
@@ -20,10 +22,12 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
   final ScrollController _scrollController = ScrollController();
   
   bool _isLoading = true;
+  bool _isUploadingImage = false;
   String? _otherUserId;
   String? _otherUserName;
   String? _currentUserId;
   List<dynamic> _messages = [];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -138,9 +142,9 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
     }
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({String? imageUrl}) async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _otherUserId == null) return;
+    if ((text.isEmpty && imageUrl == null) || _otherUserId == null) return;
 
     _messageController.clear();
     
@@ -148,6 +152,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
     final tempMsg = {
       'senderId': _currentUserId,
       'content': text,
+      'imageUrl': imageUrl,
       'createdAt': DateTime.now().toIso8601String(),
       'read': false,
     };
@@ -160,6 +165,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
       final res = await apiClient.post('/api/school/messages', body: {
         'receiverId': _otherUserId,
         'content': text,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       });
       if (res.statusCode != 201) {
         // Handle failure if needed
@@ -167,6 +173,51 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
       }
     } catch (e) {
       debugPrint('Error sending message: $e');
+    }
+  }
+
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: source, imageQuality: 70);
+      if (pickedFile == null) return;
+
+      setState(() {
+        _isUploadingImage = true;
+      });
+
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'jwt_token');
+
+      var request = http.MultipartRequest('POST', Uri.parse('${apiClient.baseUrl}/api/school/messages/upload-image'));
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.files.add(await http.MultipartFile.fromPath('image', pickedFile.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final imageUrl = data['imageUrl'];
+        
+        await _sendMessage(imageUrl: imageUrl);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload image')));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error uploading image')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
     }
   }
 
@@ -231,6 +282,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _buildOutgoingMessage(
                             text: msg['content'] ?? '',
+                            imageUrl: msg['imageUrl'],
                             time: timeStr,
                             isRead: isRead,
                           ),
@@ -240,6 +292,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _buildIncomingMessage(
                             text: msg['content'] ?? '',
+                            imageUrl: msg['imageUrl'],
                             time: timeStr,
                           ),
                         );
@@ -313,6 +366,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
 
   Widget _buildIncomingMessage({
     required String text,
+    String? imageUrl,
     String? time,
     bool showTime = true,
   }) {
@@ -344,14 +398,27 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                  color: Color(0xFF1A1C1E),
+              if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    '${apiClient.baseUrl}$imageUrl',
+                    width: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+                  ),
                 ),
-              ),
+                if (text.isNotEmpty) const SizedBox(height: 8),
+              ],
+              if (text.isNotEmpty)
+                Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Color(0xFF1A1C1E),
+                  ),
+                ),
             ],
           ),
         ),
@@ -374,6 +441,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
 
   Widget _buildOutgoingMessage({
     required String text,
+    String? imageUrl,
     required String time,
     required bool isRead,
   }) {
@@ -403,13 +471,31 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                 )
               ],
             ),
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.4,
-                color: Color(0xFF00493E), // on-primary-container equivalent
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      '${apiClient.baseUrl}$imageUrl',
+                      width: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white),
+                    ),
+                  ),
+                  if (text.isNotEmpty) const SizedBox(height: 8),
+                ],
+                if (text.isNotEmpty)
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      color: Color(0xFF00493E), // on-primary-container equivalent
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -486,12 +572,21 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                         color: Color(0xFF00C2A8),
                         shape: BoxShape.circle,
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.send, color: Color(0xFF00493E), size: 20),
-                        onPressed: _sendMessage,
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
+                      child: _isUploadingImage
+                          ? const Padding(
+                              padding: EdgeInsets.all(10.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Color(0xFF00493E), strokeWidth: 2),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.send, color: Color(0xFF00493E), size: 20),
+                              onPressed: _sendMessage,
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(8),
+                            ),
                     ),
                   ),
                 ],
@@ -540,7 +635,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                   title: const Text('Gallery'),
                   onTap: () {
                     Navigator.pop(context);
-                    // Handle gallery action
+                    _pickAndUploadImage(ImageSource.gallery);
                   },
                 ),
                 ListTile(
@@ -555,7 +650,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen> {
                   title: const Text('Camera'),
                   onTap: () {
                     Navigator.pop(context);
-                    // Handle camera action
+                    _pickAndUploadImage(ImageSource.camera);
                   },
                 ),
               ],

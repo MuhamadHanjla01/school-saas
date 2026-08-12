@@ -3,6 +3,34 @@ const router = express.Router();
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure message uploads directory exists
+const msgUploadDir = path.join(__dirname, '../../public/uploads/messages');
+if (!fs.existsSync(msgUploadDir)) {
+  fs.mkdirSync(msgUploadDir, { recursive: true });
+}
+
+const msgStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, msgUploadDir),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'msg-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const msgUpload = multer({
+  storage: msgStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype.split('/')[1]);
+    if (ext && mime) return cb(null, true);
+    cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+  }
+});
 
 // ─── Notices ───────────────────────────────────────────────────────────────────
 
@@ -267,14 +295,32 @@ router.put('/messages/read', async (req, res) => {
   }
 });
 
-// POST /api/messages — send message
+// POST /api/messages/upload-image — upload image for a message
+router.post('/messages/upload-image', msgUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No image file provided' });
+    const imageUrl = `/uploads/messages/${req.file.filename}`;
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error('[messages] upload-image error:', error.message);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// POST /api/messages — send message (text and/or image)
 router.post('/messages', async (req, res) => {
   try {
-    const { receiverId, content } = req.body;
-    if (!receiverId || !content) return res.status(400).json({ error: 'receiverId and content required' });
+    const { receiverId, content, imageUrl } = req.body;
+    if (!receiverId || (!content && !imageUrl)) return res.status(400).json({ error: 'receiverId and content or imageUrl required' });
 
     const message = await prisma.message.create({
-      data: { senderId: req.user.userId, receiverId, content, schoolId: req.schoolId },
+      data: {
+        senderId: req.user.userId,
+        receiverId,
+        content: content || '',
+        imageUrl: imageUrl || null,
+        schoolId: req.schoolId,
+      },
     });
 
     const [senderUser, receiverUser] = await Promise.all([
@@ -290,10 +336,11 @@ router.post('/messages', async (req, res) => {
     const senderName = senderUser?.teacher?.name || senderUser?.student?.name || senderUser?.email || 'Someone';
     const receiverName = receiverUser?.teacher?.name || receiverUser?.student?.name || receiverUser?.email || 'Unknown';
 
+    const notifMessage = imageUrl ? (content ? `📷 ${content}` : '📷 Sent an image') : content;
     await prisma.notification.create({
       data: {
         title: `Message from ${senderName}`,
-        message: content,
+        message: notifMessage,
         type: 'Message',
         userId: receiverId,
         schoolId: req.schoolId,

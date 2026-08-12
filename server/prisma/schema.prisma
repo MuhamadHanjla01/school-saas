@@ -509,9 +509,10 @@ model Event {
 // ─── Message ───────────────────────────────────────────────────────────────────
 
 model Message {
-  id      String   @id @default(uuid())
-  content String
-  read    Boolean  @default(false)
+  id       String   @id @default(uuid())
+  content  String
+  imageUrl String?
+  read     Boolean  @default(false)
 
   senderId   String
   sender     User   @relation("SentMessages", fields: [senderId], references: [id])
