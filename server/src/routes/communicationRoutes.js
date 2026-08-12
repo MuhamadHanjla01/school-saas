@@ -69,15 +69,24 @@ router.post('/notices', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, re
     });
 
     if (targetUsers.length > 0) {
+      const notifData = targetUsers.map(u => ({
+        title: `New Notice: ${title}`,
+        message: content,
+        type: 'Notice',
+        userId: u.id,
+        schoolId: req.schoolId,
+      }));
+
       await prisma.notification.createMany({
-        data: targetUsers.map(u => ({
-          title: `New Notice: ${title}`,
-          message: content,
-          type: 'Notice',
-          userId: u.id,
-          schoolId: req.schoolId,
-        })),
+        data: notifData,
       });
+
+      const io = req.app.get('io');
+      if (io) {
+        notifData.forEach(n => {
+          io.to(`user_${n.userId}`).emit('new_notification', n);
+        });
+      }
     }
 
     // Emit real-time event to all connected clients
@@ -331,7 +340,7 @@ router.post('/messages', async (req, res) => {
     const receiverName = receiverUser?.teacher?.name || receiverUser?.student?.name || receiverUser?.email || 'Unknown';
 
     const notifMessage = imageUrl ? (content ? `📷 ${content}` : '📷 Sent an image') : content;
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         title: `Message from ${senderName}`,
         message: notifMessage,
@@ -349,6 +358,7 @@ router.post('/messages', async (req, res) => {
         senderName,
         receiverName,
       });
+      io.to(`user_${receiverId}`).emit('new_notification', notification);
     }
 
     res.status(201).json({ message });

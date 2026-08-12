@@ -37,6 +37,8 @@ class _CustomAppBarState extends State<CustomAppBar> {
     
     final socketService = SocketService();
     socketService.on('profile_updated', _onProfileUpdated);
+    socketService.on('new_notification', _onNewNotification);
+    socketService.on('new_notice', _onNewNotice);
   }
 
   void _onProfileUpdated(dynamic data) {
@@ -47,9 +49,24 @@ class _CustomAppBarState extends State<CustomAppBar> {
     });
   }
 
+  void _onNewNotification(dynamic data) {
+    if (mounted) {
+      _fetchUnreadCount();
+    }
+  }
+
+  void _onNewNotice(dynamic data) {
+    if (mounted) {
+      _fetchUnreadCount();
+    }
+  }
+
   @override
   void dispose() {
-    SocketService().off('profile_updated');
+    final socket = SocketService();
+    socket.off('profile_updated');
+    socket.off('new_notification');
+    socket.off('new_notice');
     super.dispose();
   }
 

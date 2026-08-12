@@ -114,6 +114,13 @@ class SocketService {
       _showNoticeNotification(data);
     });
 
+    // Listen for general school notifications (assignments, fees, etc.)
+    socket!.on('new_notification', (data) {
+      if (data['type'] != 'Message') {
+        _showGeneralNotification(data);
+      }
+    });
+
     // Listen for new messages — WhatsApp-style push notification
     socket!.on('new_message', (data) async {
       final storage = const FlutterSecureStorage();
@@ -134,10 +141,16 @@ class SocketService {
             return;
           }
           
+          final content = data['content'] as String? ?? '';
+          final imageUrl = data['imageUrl'] as String?;
+          final displayBody = content.isNotEmpty 
+              ? content 
+              : (imageUrl != null ? '📷 Sent a photo' : 'Sent an attachment');
+
           _showMessageNotification(
             senderId: senderId ?? '',
             senderName: data['senderName'] ?? 'Someone',
-            messageContent: data['content'] ?? 'You received a new message.',
+            messageContent: displayBody,
           );
         }
       }
@@ -244,13 +257,42 @@ class SocketService {
     );
   }
 
+  /// General notification with distinct styling (Assignments, Fees, etc.)
+  Future<void> _showGeneralNotification(dynamic data) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      _noticeChannelId,
+      _noticeChannelName,
+      channelDescription: _noticeChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'New notification',
+      category: AndroidNotificationCategory.status,
+      autoCancel: true,
+    );
+    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+    
+    final title = data['title'] ?? 'Notification';
+    final body = data['message'] ?? '';
+    final type = (data['type'] ?? 'General').toString();
+    
+    await _localNotifications.show(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: title,
+      body: body,
+      notificationDetails: platformDetails,
+      payload: jsonEncode({
+        'type': type.toLowerCase(),
+      }),
+    );
+  }
+
   /// Handle notification tap — navigate to the appropriate screen
   static void _onNotificationTap(NotificationResponse response) {
     if (response.payload == null) return;
     
     try {
       final data = jsonDecode(response.payload!);
-      final type = data['type'];
+      final type = (data['type'] ?? '').toString().toLowerCase();
       
       if (type == 'message') {
         final senderId = data['senderId'];
@@ -263,8 +305,13 @@ class SocketService {
             'otherUserName': senderName,
           },
         );
+      } else if (type == 'assignment') {
+        navigatorKey.currentState?.pushNamed('/assignments');
+      } else if (type == 'notice') {
+        navigatorKey.currentState?.pushNamed('/notices');
+      } else {
+        navigatorKey.currentState?.pushNamed('/notifications');
       }
-      // For notices, just open the app (it will show dashboard)
     } catch (e) {
       debugPrint('Error handling notification tap: $e');
     }
