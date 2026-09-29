@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -11,6 +11,7 @@ datasource db {
 
 model School {
   id        String   @id @default(uuid())
+  institutionType String @default("School")
   name      String
   slug      String   @unique   // URL-friendly identifier e.g. "inilabs-academy"
   domain    String?  @unique   // Custom domain e.g. "school.inilabs.com"
@@ -22,6 +23,13 @@ model School {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  stripeAccountId       String? @unique
+  paymentCurrency       String  @default("usd")
+  paymentCountry        String?
+  stripeChargesEnabled  Boolean @default(false)
+  stripePayoutsEnabled  Boolean @default(false)
+  stripeDetailsSubmitted Boolean @default(false)
 
   users              User[]
   students           Student[]
@@ -49,6 +57,12 @@ model School {
   healthRecords      HealthRecord[]
   transportRoutes    TransportRoute[]
   certificates       Certificate[]
+  settings           SchoolSettings?
+  subscription       Subscription?
+  supportTickets     SupportTicket[]
+  campuses Campus[]
+  academicTerms AcademicTerm[]
+  hostelRooms HostelRoom[]
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
@@ -87,7 +101,7 @@ model User {
 
 model Student {
   id           String   @id @default(uuid())
-  studentId    String   @unique
+  studentId    String
   name         String
   guardianName String
   phone        String
@@ -152,7 +166,12 @@ model Student {
   attendance   Attendance[]
   feePayments  FeePayment[]
   examResults  ExamResult[]
+  enrollments Enrollment[]
+  hostelAllocations HostelAllocation[]
+  transportAssignments TransportAssignment[]
+  invoices StudentInvoice[]
 
+  @@unique([schoolId, studentId])
   @@index([schoolId])
 }
 
@@ -160,7 +179,7 @@ model Student {
 
 model Teacher {
   id         String   @id @default(uuid())
-  employeeId String   @unique
+  employeeId String
   name       String
   department String
   phone      String
@@ -185,6 +204,7 @@ model Teacher {
   teacherAttendance TeacherAttendance[]
   salaries          Salary[]
 
+  @@unique([schoolId, employeeId])
   @@index([schoolId])
 }
 
@@ -192,7 +212,7 @@ model Teacher {
 
 model Staff {
   id           String   @id @default(uuid())
-  staffId      String   @unique
+  staffId      String
   name         String
   role         String             // Librarian, Security Guard, Janitor, etc.
   department   String
@@ -208,6 +228,7 @@ model Staff {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
+  @@unique([schoolId, staffId])
   @@index([schoolId])
 }
 
@@ -215,7 +236,7 @@ model Staff {
 
 model Parent {
   id           String   @id @default(uuid())
-  parentId     String   @unique
+  parentId     String
   name         String
   phone        String
   email        String?
@@ -230,6 +251,7 @@ model Parent {
 
   students Student[]
 
+  @@unique([schoolId, parentId])
   @@index([schoolId])
 }
 
@@ -433,6 +455,7 @@ model Fee {
   id       String @id @default(uuid())
   name     String
   amount   Float
+  currency String @default("usd")
   dueDate  DateTime
 
   classId String
@@ -454,6 +477,11 @@ model FeePayment {
   amount   Float
   paidDate DateTime?
   status   String   @default("Pending")
+  currency String   @default("usd")
+  method   String   @default("Manual")
+  stripePaymentIntentId String? @unique
+  refundedAmountMinor Int @default(0)
+  stripeRefundId String? @unique
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -465,8 +493,45 @@ model FeePayment {
 
   createdAt DateTime @default(now())
 
+  attempts PaymentAttempt[]
+
   @@unique([studentId, feeId])
   @@index([schoolId])
+}
+
+// A durable attempt gives concurrent requests one Stripe idempotency key and
+// preserves the school/account/amount snapshot independently of browser input.
+model PaymentAttempt {
+  id String @id @default(uuid())
+  paymentId String
+  payment FeePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  activeKey String? @unique
+  schoolId String
+  studentId String
+  feeId String
+  provider String @default("Stripe")
+  stripeAccountId String?
+  providerSessionId String? @unique
+  merchantRef String?
+  checkoutPayload String?
+  amountMinor Int
+  currency String
+  stripeSessionId String? @unique
+  stripePaymentIntentId String? @unique
+  checkoutUrl String?
+  status String @default("Creating")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId, studentId])
+}
+
+model StripeEvent {
+  id String @id
+  accountId String
+  type String
+  createdAt DateTime @default(now())
 }
 
 // ─── Notice ────────────────────────────────────────────────────────────────────
@@ -581,6 +646,8 @@ model Document {
   category    String   @default("General") // Policy, Student Record, Finance, Template
   uploadedBy  String?
   url         String?          // File storage path/URL
+  content     Bytes?
+  sizeBytes   Int @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -588,6 +655,99 @@ model Document {
   school   School @relation(fields: [schoolId], references: [id])
 
   @@index([schoolId])
+}
+
+model SchoolSettings {
+  timezone String @default("Asia/Kathmandu")
+  province String @default("")
+  district String @default("")
+  municipality String @default("")
+  ward String @default("")
+  fiscalYear String @default("")
+  schoolId String @id
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  registrationNumber String @default("")
+  academicYear String @default("")
+  termName String @default("")
+  startDate DateTime?
+  endDate DateTime?
+  passingMarks Int @default(40)
+  gradingScale String @default("A:90,B:80,C:70,D:60,E:40,F:0")
+  updatedAt DateTime @updatedAt
+}
+
+model Plan {
+  id String @id @default(uuid())
+  name String @unique
+  priceMinor Int @default(0)
+  currency String @default("usd")
+  interval String @default("Monthly")
+  studentLimit Int @default(500)
+  storageGb Int @default(10)
+  features String @default("")
+  active Boolean @default(true)
+  subscriptions Subscription[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id String @id @default(uuid())
+  schoolId String @unique
+  school School @relation(fields: [schoolId], references: [id])
+  planId String
+  plan Plan @relation(fields: [planId], references: [id])
+  status String @default("Active")
+  startDate DateTime
+  endDate DateTime
+  payments SubscriptionPayment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, endDate])
+}
+
+model SubscriptionPayment {
+  id String @id @default(uuid())
+  subscriptionId String
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  amountMinor Int
+  currency String @default("usd")
+  reference String @unique
+  paidDate DateTime
+  note String @default("")
+  createdAt DateTime @default(now())
+}
+
+// Validated, versioned editorial/configuration records, never account permissions.
+model PlatformEntry {
+  id String @id @default(uuid())
+  kind String
+  title String
+  data String
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([kind, createdAt])
+}
+
+model PlatformSetting {
+  key String @id
+  data String
+  updatedAt DateTime @updatedAt
+}
+
+model SupportTicket {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id])
+  subject String
+  description String
+  priority String @default("Normal")
+  status String @default("Open")
+  response String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([schoolId, status])
 }
 
 // ─── Notification ──────────────────────────────────────────────────────────────
@@ -699,6 +859,8 @@ model TransportRoute {
   capacity    Int
   enrolled    Int      @default(0)
   fee         Float
+  stops TransportStop[]
+  assignments TransportAssignment[]
 
   schoolId    String
   school      School   @relation(fields: [schoolId], references: [id])
@@ -739,4 +901,224 @@ model AppVersion {
   downloadUrl  String
   releaseNotes String?
   createdAt    DateTime @default(now())
+}
+
+// Institution expansion. Existing School IDs remain the tenant boundary.
+model Campus {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  name String
+  code String
+  address String @default("")
+  departments Department[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, code])
+  @@index([schoolId])
+}
+model Department {
+  id String @id @default(uuid())
+  schoolId String
+  campusId String
+  campus Campus @relation(fields: [campusId], references: [id], onDelete: Restrict)
+  name String
+  code String
+  programs Program[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([campusId, code])
+  @@index([schoolId])
+}
+model Program {
+  id String @id @default(uuid())
+  schoolId String
+  departmentId String
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  name String
+  code String
+  level String @default("School")
+  system String @default("Annual")
+  duration Int @default(1)
+  requiredCredits Int @default(0)
+  affiliatingBody String @default("")
+  enrollments Enrollment[]
+  courses ProgramCourse[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, code])
+  @@index([schoolId])
+}
+model AcademicTerm {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  name String
+  academicYear String
+  startDate DateTime
+  endDate DateTime
+  enrollments Enrollment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, academicYear, name])
+  @@index([schoolId])
+}
+model ProgramCourse {
+  id String @id @default(uuid())
+  schoolId String
+  programId String
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  code String
+  name String
+  curriculumVersion String
+  termNumber Int @default(1)
+  credits Int @default(0)
+  elective Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([programId, curriculumVersion, code])
+  @@index([schoolId])
+}
+model Enrollment {
+  id String @id @default(uuid())
+  schoolId String
+  studentId String
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  programId String
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  termId String
+  term AcademicTerm @relation(fields: [termId], references: [id], onDelete: Restrict)
+  batch String
+  curriculumVersion String
+  rollNumber String @default("")
+  status String @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([studentId, programId, termId])
+  @@index([schoolId])
+}
+model HostelRoom {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  building String
+  name String
+  capacity Int
+  allocations HostelAllocation[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, building, name])
+  @@index([schoolId])
+}
+model HostelAllocation {
+  id String @id @default(uuid())
+  schoolId String
+  studentId String
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  roomId String
+  room HostelRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  bedNumber Int
+  startDate DateTime
+  endDate DateTime
+  status String @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([schoolId, roomId])
+  @@index([studentId])
+}
+model TransportStop {
+  id String @id @default(uuid())
+  schoolId String
+  routeId String
+  route TransportRoute @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  name String
+  sequence Int
+  pickupTime String
+  dropTime String
+  assignments TransportAssignment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([routeId, sequence])
+  @@index([schoolId])
+}
+model TransportAssignment {
+  id String @id @default(uuid())
+  schoolId String
+  studentId String
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  routeId String
+  route TransportRoute @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  stopId String
+  stop TransportStop @relation(fields: [stopId], references: [id], onDelete: Restrict)
+  startDate DateTime
+  endDate DateTime
+  status String @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([schoolId, routeId])
+  @@index([studentId])
+}
+model LeaveRequest {
+  id String @id @default(uuid())
+  schoolId String
+  employeeType String
+  employeeId String
+  category String
+  startDate DateTime
+  endDate DateTime
+  reason String
+  status String @default("Pending")
+  decisionNote String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([schoolId])
+}
+model PayrollEntry {
+  id String @id @default(uuid())
+  schoolId String
+  employeeType String
+  employeeId String
+  month String
+  basicMinor Int
+  allowancesMinor Int @default(0)
+  deductionsMinor Int @default(0)
+  netMinor Int
+  currency String @default("npr")
+  status String @default("Draft")
+  reference String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, employeeType, employeeId, month])
+  @@index([schoolId])
+}
+model StudentInvoice {
+  id String @id @default(uuid())
+  schoolId String
+  studentId String
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  number String
+  description String
+  amountMinor Int
+  discountMinor Int @default(0)
+  discountReason String @default("")
+  currency String @default("npr")
+  dueDate DateTime
+  receipts InvoiceReceipt[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, number])
+  @@index([schoolId])
+}
+model InvoiceReceipt {
+  id String @id @default(uuid())
+  schoolId String
+  invoiceId String
+  invoice StudentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  reference String
+  amountMinor Int
+  method String
+  paidDate DateTime
+  createdAt DateTime @default(now())
+  @@unique([schoolId, reference])
+  @@index([schoolId, invoiceId])
 }

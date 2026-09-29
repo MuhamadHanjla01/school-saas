@@ -13,7 +13,7 @@ export default function LaboratoryView({ dark }) {
 
   const fetchInventory = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/laboratory`, { withCredentials: true });
       setInventory(res.data);
     } catch (error) {
       console.error(error);
@@ -33,7 +33,7 @@ export default function LaboratoryView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory`, form, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_API_URL || ''}/api/laboratory`, form, { withCredentials: true });
       setToast({ message: form.id ? 'Item updated successfully' : 'Item added successfully', type: 'success' });
       setModalOpen(false);
       fetchInventory();
@@ -46,7 +46,7 @@ export default function LaboratoryView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Delete this item?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/laboratory/${id}`, { withCredentials: true });
+      await axios.delete(`${import.meta.env.VITE_API_URL || ''}/api/laboratory/${id}`, { withCredentials: true });
       setToast({ message: 'Item deleted', type: 'success' });
       fetchInventory();
     } catch (error) {

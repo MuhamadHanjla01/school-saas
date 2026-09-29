@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'staff', readRoles: ADMIN_ROLES });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -55,7 +57,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
   try {
     const { name, role, department, phone, email, address, emergencyContact, joiningDate, status } = req.body;
     const staff = await dbCall(() => prisma.staff.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { name, role, department, phone, email, address, emergencyContact, joiningDate: joiningDate ? new Date(joiningDate) : undefined, status },
     }));
     res.json({ staff });
@@ -68,7 +70,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
 // DELETE /api/staff/:id — delete staff
 router.delete('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
   try {
-    await dbCall(() => prisma.staff.delete({ where: { id: req.params.id } }));
+    await dbCall(() => prisma.staff.delete({ where: { id: req.params.id, schoolId: req.schoolId } }));
     res.json({ message: 'Staff deleted' });
   } catch (error) {
     console.error('[staff] DELETE error:', error.message);

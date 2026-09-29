@@ -1,15 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'certificate', readRoles: ADMIN_ROLES });
 const prisma = require('../prismaClient');
 
 // Get all certificates
 router.get('/', async (req, res) => {
   try {
     const certificates = await prisma.certificate.findMany({
-      where: { schoolId: req.tenant.id },
+      where: { schoolId: req.schoolId },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(certificates);
+    res.json(certificates.map(record => ({ ...record, issueDate: record.date })));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch certificates' });
@@ -25,9 +27,9 @@ router.post('/', async (req, res) => {
         certId: `CERT-${Date.now()}`,
         studentName,
         type,
-        issueDate: issueDate ? new Date(issueDate) : new Date(),
+        date: issueDate ? new Date(issueDate) : new Date(),
         status: status || 'Issued',
-        schoolId: req.tenant.id
+        schoolId: req.schoolId
       }
     });
     res.status(201).json(certificate);
@@ -40,7 +42,7 @@ router.post('/', async (req, res) => {
 // Delete certificate
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.certificate.delete({ where: { id: req.params.id } });
+    await prisma.certificate.delete({ where: { id: req.params.id, schoolId: req.schoolId } });
     res.json({ message: 'Certificate deleted' });
   } catch (error) {
     console.error(error);

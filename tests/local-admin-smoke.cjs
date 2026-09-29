@@ -1,0 +1,35 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+(async()=>{
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ const errors=[],failures=[],checks=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ page.on('response',r=>{if(r.url().includes('/api/')&&r.status()>=400&&!r.url().includes('/auth/refresh')) failures.push({url:r.url(),status:r.status()});});
+ const origin=process.env.SMOKE_URL || 'http://localhost:5174';
+ async function login(email){await page.goto(origin+'/login');await page.getByRole('textbox',{name:'Email address',exact:true}).fill(email);await page.getByRole('textbox',{name:'Password',exact:true}).fill('admin123');await page.getByRole('button',{name:'Sign In',exact:true}).click();await page.waitForURL(/\/(superadmin|admin)$/);}
+ try{
+  await login('admin@erpzo.com');
+  const platform=['Dashboard','Manage Schools','School Inquiries','Role & Permission','Staff','Package','Subscription','Transactions','Addons','Features','Coupons & Discounts','Email Schools','SMS / WhatsApp','Templates','Push History','Contact Inquiry','Platform Analytics','Revenue Reports','Usage Reports','Ticket Inbox','Knowledge Base','Audit Logs','Login Activity','Impersonation Logs','System Settings','Web Settings','Academy Setup','White-label','API Settings','Database Backup','System Update','Documentation'];
+  for(const name of platform){await page.goto(origin+'/superadmin?view='+encodeURIComponent(name));await page.waitForTimeout(250);await page.waitForLoadState('networkidle');const text=await page.locator('main').innerText();assert.ok(text.length>60,name+' is blank');checks.push('Platform: '+name);}
+  await page.goto(origin+'/superadmin?view=Manage%20Schools');await page.getByRole('button',{name:'Onboard school',exact:true}).click();await page.getByLabel('School name',{exact:false}).fill('Browser Verified School');await page.getByLabel('School identifier',{exact:false}).fill('browser-verified-'+Date.now());await page.getByLabel('Administrator name',{exact:false}).fill('Browser Admin');await page.getByLabel('Administrator email',{exact:false}).fill('browser-'+Date.now()+'@test.example');await page.getByLabel('Administrator password',{exact:false}).fill('Browser-Password-123');await page.getByRole('button',{name:'Save',exact:true}).click();await page.waitForTimeout(250);await page.waitForLoadState('networkidle');await page.locator('dialog[open]').waitFor({state:'hidden',timeout:15000});assert.ok((await page.locator('main').innerText()).includes('Browser Verified School'));
+  await page.goto(origin+'/superadmin?view=Package');await page.getByRole('button',{name:'Add record',exact:true}).waitFor();await page.getByRole('button',{name:'Add record',exact:true}).click();const planName='Browser Plan '+Date.now();await page.getByLabel('Name *',{exact:true}).fill(planName);await page.getByRole('button',{name:'Save',exact:true}).click();await page.locator('dialog[open]').waitFor({state:'hidden'});await page.getByRole('cell',{name:planName,exact:true}).waitFor();await page.reload();await page.getByRole('cell',{name:planName,exact:true}).waitFor();
+  await page.screenshot({path:'work/platform-after-ux.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Toggle navigation',exact:true}).click();await page.screenshot({path:'work/platform-mobile-navigation.png',fullPage:true});await page.getByRole('button',{name:'Close navigation',exact:true}).click({position:{x:370,y:400}});await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole('button',{name:'Sign out',exact:true}).last().click();await page.waitForURL(/login/);
+  await login('schooladmin@erpzo.com');
+  const groups={Academics:['Student Management','Teacher Management','Staff Management','Classes & Sections','Subjects','Timetable','Attendance','Assignment Management','Gradebook & Report Cards','Exam Management'],Admissions:['Admission Management','Parent Management'],Finance:['Fee Management','Payment Gateway'],'School Services':['Library','Laboratory','Transport','Health Records','Certificates'],Communication:['Communication Center','Academic Calendar','Notifications'],Reports:['Reports & Analytics','Document Management','Audit Logs'],Administration:['User & Role Management','School Settings','My Profile','Platform Support']};
+  for(const [group,views] of Object.entries(groups)){await page.locator('aside').getByText(group,{exact:true}).click();for(const name of views){await page.locator('aside').getByRole('button',{name,exact:true}).click();await page.waitForTimeout(250);await page.waitForLoadState('networkidle');assert.ok((await page.locator('main').innerText()).length>60,name+' is blank');checks.push('School: '+name);}}
+  await page.locator('aside').getByRole('button',{name:'School Settings',exact:true}).click();await page.getByLabel('Academic year',{exact:true}).fill('2026-2027');await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByText('Changes saved.',{exact:true}).waitFor();
+  await page.locator('aside').getByRole('button',{name:'Platform Support',exact:true}).click();await page.getByRole('button',{name:'New support ticket',exact:true}).click();await page.getByLabel('Subject',{exact:false}).fill('Browser workflow verified');await page.getByLabel('Description',{exact:false}).fill('Support request created through the local browser.');await page.getByRole('button',{name:'Save',exact:true}).click();await page.locator('dialog[open]').waitFor({state:'hidden'});await page.getByRole('heading',{name:'Browser workflow verified',exact:true}).last().waitFor();
+  await page.screenshot({path:'work/school-browser-check.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'work/school-mobile-check.png',fullPage:true});
+  await page.goto(origin+'/demo');await page.getByLabel('Your name',{exact:false}).fill('Browser Inquiry');await page.getByLabel('Work email',{exact:false}).fill('browser-inquiry@test.example');await page.getByLabel('School name',{exact:false}).fill('Inquiry School');await page.getByLabel('Tell us about your school',{exact:false}).fill('Please arrange a demonstration.');await page.getByRole('button',{name:'Submit request',exact:true}).click();await page.getByRole('heading',{name:'Request received',exact:true}).waitFor();
+  assert.equal(errors.length,0,JSON.stringify(errors));
+  assert.equal(failures.length,0,JSON.stringify(failures));
+  fs.writeFileSync('work/browser-verification.json',JSON.stringify({checks,errors,failures},null,2));console.log(JSON.stringify({passed:checks.length,errors,failures},null,2));
+ }catch(e){console.error(e);console.error(JSON.stringify({checks,errors,failures},null,2));await page.screenshot({path:'work/browser-failure.png',fullPage:true});process.exitCode=1;}
+ finally{await browser.close();}
+})();

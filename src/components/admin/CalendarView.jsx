@@ -13,7 +13,7 @@ export default function CalendarView({ dark }) {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://erpzo-backend.onrender.com/api/school/events');
+      const res = await axios.get('/api/school/events');
       setEvents(res.data.events || []);
     } catch (err) {
       console.error('Failed to fetch events', err);
@@ -29,7 +29,7 @@ export default function CalendarView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('https://erpzo-backend.onrender.com/api/school/events', form);
+      if (form.id) await axios.put(`/api/school/events/${form.id}`, form); else await axios.post('/api/school/events', form);
       setToast({ message: 'Event added successfully', type: 'success' });
       setModalOpen(false);
       fetchEvents();
@@ -37,6 +37,8 @@ export default function CalendarView({ dark }) {
       setToast({ message: err.response?.data?.error || 'Failed to save event', type: 'error' });
     }
   };
+
+  const removeEvent = async id => { if (!window.confirm('Delete this event?')) return; try { await axios.delete(`/api/school/events/${id}`); fetchEvents(); } catch (err) { setToast({message:err.response?.data?.error || 'Unable to delete event',type:'error'}); } };
 
   return (
     <div className="p-3 md:p-5 lg:p-6 space-y-4 mx-auto w-full max-w-[1600px] relative">
@@ -63,6 +65,7 @@ export default function CalendarView({ dark }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {events.map((e, i) => (
                 <div key={e.id || i} className={`admin-row-enter p-4 rounded-xl border flex flex-col gap-2 ${dark ? 'bg-[#3c4a46]/30 border-[#4a5854]' : 'bg-surface-container-lowest border-outline-variant/50'}`} style={{ animationDelay: `${i * 0.03}s` }}>
+                  <div className="flex gap-2 justify-end"><button aria-label={`Edit ${e.title}`} onClick={() => { setForm({...e,date:e.date.slice(0,10)}); setModalOpen(true); }}>Edit</button><button aria-label={`Delete ${e.title}`} onClick={() => removeEvent(e.id)}>Delete</button></div>
                   <div className="flex items-start justify-between">
                     <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center shrink-0 ${dark ? 'bg-[#2f3133]' : 'bg-white shadow-sm'}`}>
                       <span className="text-[10px] font-bold text-error uppercase">{e.month}</span>

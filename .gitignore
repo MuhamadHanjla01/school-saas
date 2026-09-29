@@ -32,3 +32,16 @@ server/.env
 server/prisma/*.db
 server/prisma/*.sqlite
 .vercel
+
+# Local credentials, runtime state and mobile signing
+.env.*
+!.env.example
+!server/.env.example
+*.db-journal
+*.db-wal
+*.db-shm
+*.jks
+*.keystore
+**/key.properties
+work/
+backups/

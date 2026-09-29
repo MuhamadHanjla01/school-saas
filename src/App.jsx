@@ -1,19 +1,34 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import ResetPasswordPage from './components/website/ResetPasswordPage';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import LandingPage from './components/website/LandingPage';
 import DemoPage from './components/website/DemoPage';
 import AboutPage from './components/website/AboutPage';
 import PurchasePage from './components/website/PurchasePage';
-import SuperadminPage from './components/superadmin/SuperadminPage';
-import AdminPage from './components/admin/AdminPage';
+const SuperadminPage = lazy(() => import('./components/superadmin/SuperadminPage'));
+const AdminPage = lazy(() => import('./components/admin/AdminPage'));
+const TeacherPage = lazy(() => import('./components/teacher/TeacherPage'));
+const StudentPage = lazy(() => import('./components/student/StudentPage'));
 import LoginPage from './components/website/LoginPage';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { portalForRole } from './context/sessionClient';
 import ProtectedRoute from './components/ProtectedRoute';
+
+function UnavailablePage({ unauthorized = false }) {
+  const { user } = useAuth();
+  const destination = user ? portalForRole(user.role) : '/login';
+  return <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+    <h1 className="text-2xl font-bold">{unauthorized ? 'This page is not available for your account' : 'Page not found'}</h1>
+    <p>{unauthorized ? 'Your account can access only its assigned school portal.' : 'The requested address does not exist.'}</p>
+    <Link className="bg-primary text-white px-4 py-3 rounded-xl" to={destination === '/unauthorized' ? '/login' : destination}>Return to your portal</Link>
+  </main>;
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
+        <Suspense fallback={<p role="status" className="p-8">Loading portal…</p>}><Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -34,9 +49,29 @@ export default function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/teacher/*" 
+            element={
+              <ProtectedRoute allowedRoles={['Teacher']}>
+                <TeacherPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/student/*" 
+            element={
+              <ProtectedRoute allowedRoles={['Student']}>
+                <StudentPage />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/login" element={<LoginPage />} />
-        </Routes>
+          <Route path="/unauthorized" element={<UnavailablePage unauthorized />} />
+          <Route path="*" element={<UnavailablePage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Routes></Suspense>
       </Router>
     </AuthProvider>
   );
 }
+

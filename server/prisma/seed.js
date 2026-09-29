@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true') throw new Error('Demo seeding requires ALLOW_DEMO_SEED=true in a non-production environment.');
   console.log('🌱 Seeding database with multi-tenant data...');
   const hash = await bcrypt.hash('admin123', 10);
 
@@ -167,15 +168,18 @@ async function main() {
     });
   }
 
+  const teacherHash = await bcrypt.hash('teacher123', 10);
+  const studentHash = await bcrypt.hash('student123', 10);
+
   await prisma.user.upsert({
     where: { email: 'teacher@erpzo.com' },
-    update: { passwordHash: hash },
-    create: { email: 'teacher@erpzo.com', passwordHash: hash, role: 'Teacher', schoolId: sid },
+    update: { passwordHash: teacherHash },
+    create: { email: 'teacher@erpzo.com', passwordHash: teacherHash, role: 'Teacher', schoolId: sid },
   });
   await prisma.user.upsert({
     where: { email: 'student@erpzo.com' },
-    update: { passwordHash: hash },
-    create: { email: 'student@erpzo.com', passwordHash: hash, role: 'Student', schoolId: sid },
+    update: { passwordHash: studentHash },
+    create: { email: 'student@erpzo.com', passwordHash: studentHash, role: 'Student', schoolId: sid },
   });
 
   // ─── Subjects ──────────────────────────────────────────────────────────

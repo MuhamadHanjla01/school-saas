@@ -1,19 +1,32 @@
+# Optional Render deployment. Local development uses npm run dev.
+# This SQLite release needs a persistent disk and one application instance.
+# See https://render.com/docs/blueprint-spec and docs/DEPLOYMENT.md.
 services:
   - type: web
-    name: erpzo-backend
-    env: node
-    plan: free
-    rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    name: erpzo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/health/ready
+    disk:
+      name: erpzo-data
+      mountPath: /data
+      sizeGB: 10
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: erpzo-db
-          property: connectionString
-      - key: JWT_SECRET
+        value: file:/data/erpzo.db
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_ACCESS_SECRET
         generateValue: true
-
-databases:
-  - name: erpzo-db
-    plan: free
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: TRUST_PROXY_HOPS
+        value: "1"

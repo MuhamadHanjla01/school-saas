@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'healthRecord', readRoles: ADMIN_ROLES });
 const prisma = require('../prismaClient');
 
 // Get all health records
 router.get('/', async (req, res) => {
   try {
     const records = await prisma.healthRecord.findMany({
-      where: { schoolId: req.tenant.id },
+      where: { schoolId: req.schoolId },
       orderBy: { createdAt: 'desc' }
     });
     res.json(records);
@@ -22,8 +24,8 @@ router.post('/', async (req, res) => {
     const { id, studentName, bloodGroup, allergies, lastCheckup, notes } = req.body;
     if (id) {
       const record = await prisma.healthRecord.update({
-        where: { id },
-        data: { studentName, bloodGroup, allergies, lastCheckup: new Date(lastCheckup), notes }
+        where: { id, schoolId: req.schoolId },
+        data: { studentName, bloodGroup, allergies, lastCheckup: lastCheckup ? new Date(lastCheckup) : null, notes }
       });
       res.json(record);
     } else {
@@ -33,9 +35,9 @@ router.post('/', async (req, res) => {
           studentName,
           bloodGroup,
           allergies,
-          lastCheckup: new Date(lastCheckup),
+          lastCheckup: lastCheckup ? new Date(lastCheckup) : null,
           notes,
-          schoolId: req.tenant.id
+          schoolId: req.schoolId
         }
       });
       res.status(201).json(record);
@@ -49,7 +51,7 @@ router.post('/', async (req, res) => {
 // Delete health record
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.healthRecord.delete({ where: { id: req.params.id } });
+    await prisma.healthRecord.delete({ where: { id: req.params.id, schoolId: req.schoolId } });
     res.json({ message: 'Health record deleted' });
   } catch (error) {
     console.error(error);

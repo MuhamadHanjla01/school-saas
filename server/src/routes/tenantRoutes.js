@@ -1,177 +1,70 @@
-const express = require('express');
-const router = express.Router();
+const router = require('express').Router();
 const prisma = require('../prismaClient');
-
-// Middleware to check if user is SuperAdmin
-const requireSuperAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'SuperAdmin') {
-    next();
-  } else {
-    res.status(403).json({ message: 'Access denied: SuperAdmin only' });
-  }
-};
-
-// Apply to all routes in this file
-router.use(requireSuperAdmin);
-
-// Dashboard Stats
+const bcrypt = require('bcryptjs');
+const { checkRole } = require('../middleware/authMiddleware');
+const { field: f, validate, fail, audit, errorHandler } = require('../services/adminValidation');
+router.use(checkRole(['SuperAdmin']));
+const schoolFields = [f('name', 'School name', 'text', { required: true }), f('email', 'Administrator email', 'email', { required: true }), f('password', 'Administrator password', 'password', { required: true }), f('adminName', 'Administrator name', 'text', { required: true }), f('plan', 'Plan', 'text', { default: 'Free' })];
 router.get('/dashboard-stats', async (req, res) => {
-  try {
-    const totalSchools = await prisma.school.count();
-    const activeSchools = await prisma.school.count({ where: { isActive: true } });
-    
-    // Recent schools
-    const recent = await prisma.school.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        name: true,
-        createdAt: true,
-        isActive: true,
-        plan: true
-      }
-    });
-
-    res.json({
-      totalSchools,
-      activeSchools,
-      recentSchools: recent.map(r => ({
-        name: r.name,
-        date: new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: r.isActive ? 'Active' : 'Suspended',
-        plan: r.plan
-      }))
-    });
-  } catch (error) {
-    console.error('Fetch dashboard stats error:', error);
-    res.status(500).json({ message: 'Server error fetching stats' });
-  }
+  const [totalSchools, activeSchools, recentSchools] = await Promise.all([prisma.school.count(), prisma.school.count({ where: { isActive: true } }), prisma.school.findMany({ take: 5, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, createdAt: true, isActive: true, plan: true } })]);
+  res.json({ totalSchools, activeSchools, recentSchools: recentSchools.map(s => ({ ...s, date: s.createdAt, status: s.isActive ? 'Active' : 'Suspended' })) });
 });
-
-// Get all schools (tenants)
 router.get('/schools', async (req, res) => {
-  try {
-    const schools = await prisma.school.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { students: true }
-        }
-      }
-    });
-    
-    // Format for frontend
-    const formatted = schools.map(s => ({
-      id: s.id,
-      name: s.name,
-      joined: new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      subdomain: s.domain || `${s.slug}.erpzo.com`,
-      plan: s.plan,
-      planColor: s.plan === 'Enterprise' ? 'bg-secondary/10 text-secondary' : 
-                 s.plan === 'Pro' ? 'bg-tertiary/10 text-tertiary' : 'bg-surface-variant text-on-surface-variant',
-      students: s._count.students.toString(),
-      studentPct: Math.min((s._count.students / 2500) * 100, 100) + '%',
-      studentColor: 'bg-primary-container',
-      status: s.isActive ? 'Active' : 'Suspended',
-      statusColor: s.isActive ? 'bg-primary-container/10 text-primary' : 'bg-error-container text-on-error-container',
-      statusDot: s.isActive ? 'bg-primary-container' : 'bg-error',
-      fallback: s.name.substring(0, 2).toUpperCase(),
-      logo: s.logo,
-      slug: s.slug
-    }));
-    
-    res.json(formatted);
-  } catch (error) {
-    console.error('Fetch schools error:', error);
-    res.status(500).json({ message: 'Server error fetching schools' });
-  }
+  const schools = await prisma.school.findMany({ orderBy: { createdAt: 'desc' }, include: { _count: { select: { students: true, teachers: true, users: true } }, subscription: { include: { plan: true } } } });
+  res.json(schools.map(s => ({ ...s, joined: s.createdAt, subdomain: s.domain || s.slug, students: s._count.students, status: s.isActive ? 'Active' : 'Suspended' })));
 });
-
-// Create a new school
 router.post('/schools', async (req, res) => {
-  try {
-    const { name, email, plan } = req.body;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    
-    // Check if slug exists
-    const existing = await prisma.school.findUnique({ where: { slug } });
-    if (existing) {
-      return res.status(400).json({ message: 'School with similar name already exists' });
-    }
-
-    const school = await prisma.school.create({
-      data: {
-        name,
-        slug,
-        email,
-        plan: plan || 'Free',
-        isActive: true
-      }
-    });
-    
-    res.status(201).json({ message: 'School created successfully', school });
-  } catch (error) {
-    console.error('Create school error:', error);
-    res.status(500).json({ message: 'Server error creating school' });
-  }
+  const input = validate(schoolFields, req.body);
+  const slug = (req.body.slug || input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  if (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{1,62}$/.test(slug)) fail('School slug must be 2–63 lowercase letters, digits or hyphens');
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  const school = await prisma.$transaction(async db => {
+    const created = await db.school.create({ data: { name: input.name, email: input.email, slug, plan: input.plan } });
+    await db.user.create({ data: { name: input.adminName, email: input.email, passwordHash, role: 'SchoolAdmin', schoolId: created.id } });
+    await db.schoolSettings.create({ data: { schoolId: created.id } });
+    await audit(db, req, 'Onboarded school and administrator', 'School', created.id, created.id);
+    return created;
+  });
+  res.status(201).json({ school, message: 'School and administrator created' });
 });
-
-// Get users for a school
+router.get('/schools/:id', async (req, res) => {
+  const school = await prisma.school.findUnique({ where: { id: req.params.id }, include: { _count: { select: { students: true, teachers: true, users: true, classes: true } }, settings: true, subscription: { include: { plan: true } } } });
+  if (!school) fail('School not found', 404);
+  res.json(school);
+});
 router.get('/schools/:id/users', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const users = await prisma.user.findMany({
-      where: { schoolId: id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true
-      }
-    });
-    res.json(users);
-  } catch (error) {
-    console.error('Fetch school users error:', error);
-    res.status(500).json({ message: 'Server error fetching users' });
-  }
+  res.json(await prisma.user.findMany({ where: { schoolId: req.params.id }, select: { id: true, name: true, email: true, role: true, lastLoginAt: true, student: { select: { class: { select: { name: true } } } } }, orderBy: { createdAt: 'desc' } }));
 });
-
-// Update school
+router.post('/schools/:id/users/:userId/reset-password', async (req, res) => {
+  const { newPassword } = validate([f('newPassword', 'New password', 'password', { required: true })], req.body);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.$transaction(async db => {
+    await db.user.update({ where: { id: req.params.userId, schoolId: req.params.id, role: { not: 'SuperAdmin' } }, data: { passwordHash, refreshToken: null } });
+    await db.passwordResetToken.deleteMany({ where: { userId: req.params.userId } });
+    await audit(db, req, 'Reset account password', 'User', req.params.userId, req.params.id);
+  });
+  res.json({ success: true });
+});
 router.put('/schools/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, subdomain, status } = req.body;
-    
-    const isActive = status !== 'Suspended' && status !== 'Inactive';
-    let updateData = { name, isActive };
-
-    if (subdomain) {
-      updateData.domain = subdomain;
-      updateData.slug = subdomain.split('.')[0];
-    }
-
-    const school = await prisma.school.update({
-      where: { id },
-      data: updateData
-    });
-    
-    res.json({ message: 'School updated successfully', school });
-  } catch (error) {
-    console.error('Update school error:', error);
-    res.status(500).json({ message: 'Server error updating school' });
+  const data = validate([f('name', 'School name', 'text', { required: true }), f('email', 'Email', 'email'), f('phone', 'Phone'), f('address', 'Address', 'textarea'), f('plan', 'Plan')], req.body, true);
+  if (req.body.status !== undefined) {
+    if (!['Active', 'Suspended'].includes(req.body.status)) fail('Invalid school status');
+    data.isActive = req.body.status === 'Active';
+    if (!data.isActive && req.params.id === req.user.schoolId) fail('Cannot suspend your own platform school');
   }
-});
-
-// Delete school
-router.delete('/schools/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.school.delete({ where: { id } });
-    res.json({ message: 'School deleted successfully' });
-  } catch (error) {
-    console.error('Delete school error:', error);
-    res.status(500).json({ message: 'Server error deleting school' });
+  if (req.body.subdomain !== undefined) {
+    if (typeof req.body.subdomain !== 'string' || (req.body.subdomain && !/^[a-z0-9.-]+$/.test(req.body.subdomain))) fail('Invalid domain');
+    data.domain = req.body.subdomain || null;
   }
+  const school = await prisma.$transaction(async db => {
+    const saved = await db.school.update({ where: { id: req.params.id }, data });
+    if (data.isActive === false) await db.user.updateMany({ where: { schoolId: saved.id }, data: { refreshToken: null } });
+    await audit(db, req, 'Updated school', 'School', saved.id, saved.id);
+    return saved;
+  });
+  if (data.isActive === false) req.app.get('io')?.in(`school_${school.id}`).disconnectSockets(true);
+  res.json({ school });
 });
-
+router.delete('/schools/:id', (req, res) => res.status(409).json({ error: 'Schools retain financial and student records. Suspend the school instead.' }));
+router.use(errorHandler);
 module.exports = router;

@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../public/uploads');
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '../../public/uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -22,12 +22,13 @@ const storage = multer.diskStorage({
     cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 1 }, fileFilter(req, file, cb) { const allowed = ['image/jpeg', 'image/png', 'image/webp']; const ok = allowed.includes(file.mimetype) && ['.jpg', '.jpeg', '.png', '.webp'].includes(path.extname(file.originalname).toLowerCase()); cb(ok ? null : Object.assign(new Error('Only PNG, JPEG and WebP avatars are allowed'), { status: 400 }), ok); } });
 
 router.post('/login', authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 router.get('/me', verifyToken, authController.me);
 router.put('/me', verifyToken, authController.updateMe);
 router.post('/me/avatar', verifyToken, upload.single('avatar'), authController.updateAvatar);

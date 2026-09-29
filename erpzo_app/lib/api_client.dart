@@ -1,3 +1,6 @@
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'app_config.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -46,7 +49,11 @@ class ApiClient {
   }
 
   /// Handle Token Refresh
-  Future<bool> refreshToken() async {
+  Future<bool>? _refreshInFlight;
+  Future<bool> refreshToken() {
+    return _refreshInFlight ??= _rotateToken().whenComplete(() => _refreshInFlight = null);
+  }
+  Future<bool> _rotateToken() async {
     final refToken = await _storage.read(key: 'refresh_token');
     if (refToken == null) return false;
 
@@ -60,6 +67,10 @@ class ApiClient {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         await _storage.write(key: 'jwt_token', value: data['accessToken']);
+        await _storage.write(key: 'refresh_token', value: data['refreshToken']);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwt_token_bg', data['accessToken']);
+        FlutterBackgroundService().invoke('updateToken', {'token': data['accessToken']});
         return true;
       }
     } catch (_) {}
@@ -222,5 +233,5 @@ class ApiUnauthorizedException implements Exception {
 /// Global singleton API client for the app.
 // If testing locally on Android emulator, use http://10.0.2.2:3000
 // final apiClient = ApiClient(baseUrl: 'http://10.0.2.2:3000');
-final apiClient = ApiClient(baseUrl: 'https://erpzo-backend.onrender.com'); // Live Production API
+final apiClient = ApiClient(baseUrl: AppConfig.apiUrl); // Live Production API
 

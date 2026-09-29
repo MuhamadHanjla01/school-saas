@@ -1,3 +1,4 @@
+import '../app_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -17,7 +18,7 @@ class SocketService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   // Use live Render backend URL
-  static const String _serverUrl = 'https://erpzo-backend.onrender.com';
+  static const String _serverUrl = AppConfig.apiUrl;
 
   // Notification IDs for grouping
   static const String _messageChannelId = 'erpzo_messages';

@@ -1,18 +1,18 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prismaClient');
 const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Public endpoint for mobile app to check for updates
 router.get('/latest', async (req, res) => {
   try {
+    const latest = await prisma.appVersion.findFirst({ orderBy: { createdAt: 'desc' } });
     return res.status(200).json({
-      latest_version: '1.0.14',
-      force_update: false,
-      download_url: 'https://school-eight-eta.vercel.app/downloads/erpzo-school.apk',
-      release_notes: 'Fixed background notification listener issue to correctly receive messages when screen is off.',
+      latest_version: latest?.version || '0.0.0',
+      force_update: latest?.forceUpdate || false,
+      download_url: latest?.downloadUrl || null,
+      release_notes: latest?.releaseNotes || '',
     });
   } catch (error) {
     console.error('Error fetching latest app version:', error);
@@ -48,8 +48,8 @@ router.post('/', verifyToken, async (req, res) => {
 
     const { version, forceUpdate, downloadUrl, releaseNotes } = req.body;
 
-    if (!version || !downloadUrl) {
-      return res.status(400).json({ error: 'Version and downloadUrl are required' });
+    if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:\+\d+)?$/.test(version) || typeof downloadUrl !== 'string' || !/^https:\/\//.test(downloadUrl) || (forceUpdate !== undefined && typeof forceUpdate !== 'boolean')) {
+      return res.status(400).json({ error: 'A semantic version, HTTPS download URL and boolean forceUpdate are required' });
     }
 
     const newVersion = await prisma.appVersion.create({

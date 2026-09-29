@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'class' });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -8,7 +10,7 @@ const { checkRole } = require('../middleware/authMiddleware');
 router.get('/', async (req, res) => {
   try {
     const { teacherId } = req.query;
-    const where = { schoolId: req.schoolId };
+    const where = { schoolId: req.schoolId, ...(req.user.role === 'Student' ? { id: req.user.classId || noProfileId } : {}) };
     if (teacherId) where.classTeacherId = teacherId;
 
     const classes = await dbCall(() => prisma.class.findMany({
@@ -42,10 +44,10 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const cls = await dbCall(() => prisma.class.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       include: {
         classTeacher: { select: { name: true } },
-        students: { select: { id: true, studentId: true, name: true, status: true } },
+        students: { where: req.user.role === 'Student' ? { id: req.user.studentId || noProfileId } : { schoolId: req.schoolId }, select: { id: true, studentId: true, name: true, status: true } },
         subjects: { include: { teacher: { select: { name: true } } } },
       },
     }));
@@ -78,7 +80,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
   try {
     const { name, room, classTeacherId } = req.body;
     const cls = await dbCall(() => prisma.class.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { name, room, classTeacherId },
     }));
     res.json({ class: cls });

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'notice', messages: true });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -12,6 +14,7 @@ router.get('/notices', async (req, res) => {
     const { type } = req.query;
     const where = { schoolId: req.schoolId };
     if (type && type !== 'All') where.type = type;
+    if (!ADMIN_ROLES.includes(req.user.role)) where.audience = { in: ['All', req.user.role, `${req.user.role}s`] };
 
     const notices = await dbCall(() => prisma.notice.findMany({
       where,
@@ -61,7 +64,8 @@ router.post('/notices', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, re
     // Emit real-time event to all connected clients
     const io = req.app.get('io');
     if (io) {
-      io.emit('new_notice', notice);
+      const role = { Students: 'Student', Teachers: 'Teacher', Parents: 'Parent', Staff: 'Staff' }[notice.audience] || notice.audience;
+      io.to(notice.audience === 'All' ? `school_${req.schoolId}` : `school_${req.schoolId}_role_${role}`).emit('new_notice', notice);
     }
 
     res.status(201).json({ notice });
@@ -76,7 +80,7 @@ router.put('/notices/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req,
   try {
     const { title, content, type, audience, priority } = req.body;
     const notice = await dbCall(() => prisma.notice.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { title, content, type, audience, priority },
     }));
     res.json({ notice });
@@ -89,7 +93,7 @@ router.put('/notices/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req,
 // DELETE /api/notices/:id — delete notice
 router.delete('/notices/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
   try {
-    await dbCall(() => prisma.notice.delete({ where: { id: req.params.id } }));
+    await dbCall(() => prisma.notice.delete({ where: { id: req.params.id, schoolId: req.schoolId } }));
     res.json({ message: 'Notice deleted' });
   } catch (error) {
     console.error('[notices] DELETE error:', error.message);
@@ -134,6 +138,16 @@ router.post('/events', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res
   }
 });
 
+router.put('/events/:eventId', checkRole(ADMIN_ROLES), async (req, res) => {
+  await requireRecord(req, 'event', req.params.eventId);
+  const data = require('../services/adminValidation').validate([ {name:'title',label:'Title',required:true}, {name:'date',label:'Date',type:'date',required:true}, {name:'type',label:'Type',type:'select',options:['event','holiday','exam','deadline'],default:'event'} ], req.body);
+  res.json({event:await prisma.event.update({where:{id:req.params.eventId,schoolId:req.schoolId},data})});
+});
+router.delete('/events/:eventId', checkRole(ADMIN_ROLES), async (req,res)=>{
+  await requireRecord(req,'event',req.params.eventId);
+  await prisma.event.delete({where:{id:req.params.eventId,schoolId:req.schoolId}});res.json({success:true});
+});
+
 // ─── Timetable ─────────────────────────────────────────────────────────────────
 
 // GET /api/timetable — get timetable
@@ -143,6 +157,7 @@ router.get('/timetable', async (req, res) => {
     const where = { schoolId: req.schoolId };
     if (classId) where.classId = classId;
     if (teacherId) where.teacherId = teacherId;
+    Object.assign(where, classScope(req));
 
     const slots = await dbCall(() => prisma.timetable.findMany({
       where,
@@ -254,7 +269,7 @@ router.put('/messages/read', async (req, res) => {
     // Notify the sender that their messages have been read
     const io = req.app.get('io');
     if (io) {
-      io.emit('messages_read', {
+      io.to(`user_${senderId}`).emit('messages_read', {
         readBy: userId,
         senderId: senderId,
       });
@@ -321,7 +336,7 @@ router.post('/messages', async (req, res) => {
 // ─── Salary ────────────────────────────────────────────────────────────────────
 
 // GET /api/salary — teacher's own salary
-router.get('/salary', async (req, res) => {
+router.get('/salary', checkRole(['Teacher']), async (req, res) => {
   try {
     const user = await dbCall(() => prisma.user.findUnique({
       where: { id: req.user.userId },
@@ -343,81 +358,6 @@ router.get('/salary', async (req, res) => {
 // ─── Dashboard Stats (real data) ────────────────────────────────────────────
 
 // GET /api/dashboard-stats — real aggregated stats
-router.get('/dashboard-stats', async (req, res) => {
-  try {
-    const totalStudents = await prisma.student.count({ where: { status: 'Active', schoolId: req.schoolId } });
-    const totalTeachers = await prisma.teacher.count({ where: { schoolId: req.schoolId } });
-
-    // Attendance rate (today)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const todayAttendance = await prisma.attendance.findMany({ where: { date: { gte: today, lt: tomorrow }, schoolId: req.schoolId } });
-    const presentCount = todayAttendance.filter(a => a.status === 'Present').length;
-    const attendanceRate = todayAttendance.length > 0 ? ((presentCount / todayAttendance.length) * 100).toFixed(1) : '0';
-
-    // Fee collection
-    const paidPayments = await prisma.feePayment.findMany({ where: { status: 'Paid', schoolId: req.schoolId } });
-    const totalCollected = paidPayments.reduce((sum, p) => sum + p.amount, 0);
-
-    // Recent activities from notices
-    const recentNotices = await prisma.notice.findMany({ where: { schoolId: req.schoolId }, orderBy: { date: 'desc' }, take: 5 });
-    const recentActivities = recentNotices.map(n => ({
-      title: n.title,
-      desc: n.content.substring(0, 60) + '...',
-      time: getTimeAgo(n.date),
-    }));
-
-    // Top classes by attendance
-    const classes = await prisma.class.findMany({ where: { schoolId: req.schoolId }, include: { _count: { select: { students: true } } } });
-    const topClasses = [];
-    for (const cls of classes) {
-      const clsAttendance = todayAttendance.filter(a => a.classId === cls.id);
-      const clsPresent = clsAttendance.filter(a => a.status === 'Present').length;
-      const rate = clsAttendance.length > 0 ? Math.round((clsPresent / clsAttendance.length) * 100) : 0;
-      topClasses.push({ name: `Class ${cls.name}`, attendance: rate, students: cls._count.students });
-    }
-    topClasses.sort((a, b) => b.attendance - a.attendance);
-
-    // Upcoming events
-    const events = await prisma.event.findMany({
-      where: { date: { gte: today }, schoolId: req.schoolId },
-      orderBy: { date: 'asc' },
-      take: 4,
-    });
-    const upcomingEvents = events.map(e => ({
-      date: new Date(e.date).getDate().toString().padStart(2, '0'),
-      month: new Date(e.date).toLocaleDateString('en-US', { month: 'short' }),
-      title: e.title,
-      type: e.type,
-    }));
-
-    res.json({
-      stats: [
-        { label: 'Total Students', value: totalStudents.toLocaleString(), icon: 'school', color: '#006b5c', change: `+${Math.min(totalStudents, 24)}`, changeLabel: 'this month' },
-        { label: 'Total Teachers', value: String(totalTeachers), icon: 'badge', color: '#0060ac', change: `+${Math.min(totalTeachers, 3)}`, changeLabel: 'new hires' },
-        { label: 'Attendance Rate', value: `${attendanceRate}%`, icon: 'trending_up', color: '#006b5c', isHealth: true },
-        { label: 'Fee Collection', value: `$${(totalCollected / 1000).toFixed(1)}k`, icon: 'payments', color: '#9d4224', change: '87%', changeLabel: 'collected' },
-      ],
-      recentActivities,
-      topClasses: topClasses.slice(0, 4),
-      upcomingEvents,
-      generatedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('[dashboard-stats] error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
-  }
-});
-
-function getTimeAgo(date) {
-  const diff = Date.now() - new Date(date).getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return 'Just now';
-  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days > 1 ? 's' : ''} ago`;
-}
+router.get('/dashboard-stats', checkRole(ADMIN_ROLES), async (req, res) => { res.json(await require('../services/schoolAnalytics').schoolAnalytics(req.schoolId)); });
 
 module.exports = router;

@@ -1,6 +1,11 @@
+import '../shared/ClassicAdmin.css';
+import SupportView from './SupportView';
+import EducationView, { EDUCATION_VIEWS } from './EducationView';
+import '../shared/AdminWorkspace.css';
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import AdminDashboard from './AdminDashboard';
 import StudentsView from './StudentsView';
 import TeachersView from './TeachersView';
@@ -37,6 +42,7 @@ import './AdminPage.css';
 // ─── Sidebar Items ──────────────────────────────────────────────────────────
 
 const SIDEBAR_ITEMS = [
+  { id: 'institution', label: 'Institution & Programs', icon: 'account_balance', type: 'group', children: ['Campuses','Departments','Programs','Academic Terms','Program Courses','Enrollment History'] },
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', type: 'link' },
   { id: 'academics', label: 'Academics', icon: 'school', type: 'group',
     children: [
@@ -49,10 +55,10 @@ const SIDEBAR_ITEMS = [
     children: ['Admission Management', 'Parent Management']
   },
   { id: 'finance', label: 'Finance', icon: 'payments', type: 'group',
-    children: ['Fee Management', 'Payment Gateway']
+    children: ['Fee Management', 'Payment Gateway', 'Individual Invoices', 'Invoice Receipts']
   },
   { id: 'services', label: 'School Services', icon: 'local_library', type: 'group',
-    children: ['Library', 'Laboratory', 'Transport', 'Health Records', 'Certificates']
+    children: ['Library', 'Laboratory', 'Transport', 'Transport Stops', 'Transport Assignments', 'Hostel Rooms', 'Hostel Allocations', 'Health Records', 'Certificates']
   },
   { id: 'communication', label: 'Communication', icon: 'forum', type: 'group',
     children: ['Communication Center', 'Academic Calendar', 'Notifications']
@@ -61,11 +67,11 @@ const SIDEBAR_ITEMS = [
     children: ['Reports & Analytics', 'Document Management', 'Audit Logs']
   },
   { id: 'admin', label: 'Administration', icon: 'admin_panel_settings', type: 'group',
-    children: ['User & Role Management', 'School Settings', 'My Profile']
+    children: ['User & Role Management', 'Staff Leave', 'Payroll', 'School Settings', 'My Profile', 'Platform Support']
   },
 ];
 
-const MAPPED_VIEWS = [
+const MAPPED_VIEWS = [...Object.keys(EDUCATION_VIEWS), 'Platform Support',
   'dashboard', 'Student Management', 'Teacher Management', 'Classes & Sections',
   'Subjects', 'Assignment Management', 'Attendance', 'Fee Management', 'Exam Management', 'Timetable', 'Communication Center', 'Academic Calendar', 'Notifications',
   'School Settings', 'Gradebook & Report Cards', 'Library', 'Transport', 'Health Records', 'Certificates', 'Laboratory',
@@ -78,7 +84,7 @@ const MAPPED_VIEWS = [
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function SidebarContent({ expanded, onToggle, activeItem, onItemClick, onSignOut }) {
+function SidebarContent({ expanded, onToggle, activeItem, onItemClick, onSignOut, schoolName }) {
   return (
     <>
       {/* Logo */}
@@ -87,7 +93,7 @@ function SidebarContent({ expanded, onToggle, activeItem, onItemClick, onSignOut
           <span className="material-symbols-outlined text-white" style={{ fontSize: '20px' }}>admin_panel_settings</span>
         </div>
         <div className="min-w-0">
-          <h1 className="text-[15px] font-bold text-primary tracking-tight leading-none">iNiLabs School</h1>
+          <h1 className="text-[15px] font-bold text-primary tracking-tight leading-none">{schoolName || 'Your School'}</h1>
           <span className="text-[10px] font-medium text-on-surface-variant opacity-70">Admin Portal</span>
         </div>
       </div>
@@ -153,7 +159,7 @@ function SidebarContent({ expanded, onToggle, activeItem, onItemClick, onSignOut
         <div className="px-3 py-1">
           <span className="text-[9px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded flex items-center gap-1.5 w-fit">
             <span className="relative w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Academic Year: 2024-25
+            School administration
           </span>
         </div>
         <button
@@ -172,31 +178,44 @@ function SidebarContent({ expanded, onToggle, activeItem, onItemClick, onSignOut
 
 export default function AdminPage() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const [expanded, setExpanded] = useState([]);
-  const [activeItem, setActiveItem] = useState('dashboard');
+  const [viewParams, setViewParams] = useSearchParams();
+  const requestedView = viewParams.get('view') || 'dashboard';
+  const activeItem = MAPPED_VIEWS.includes(requestedView) ? requestedView : 'dashboard';
+  const setActiveItem = item => setViewParams(item === 'dashboard' ? {} : { view: item });
+  const [navSearch, setNavSearch] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem('erpzo.theme') === 'dark');
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('erpzo.theme', dark ? 'dark' : 'light');
+    return () => document.documentElement.classList.remove('dark');
   }, [dark]);
 
   const toggleSubmenu = useCallback((id) => {
     setExpanded((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }, []);
 
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   const sidebarProps = {
     expanded,
     onToggle: toggleSubmenu,
     activeItem,
     onItemClick: (item) => { setActiveItem(item); setMobileOpen(false); },
-    onSignOut: () => navigate('/login'),
+    onSignOut: handleSignOut,
+    schoolName: user?.schoolName,
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden font-['Inter'] ${dark ? 'bg-[#1a1c1e] text-[#f0f0f3]' : 'bg-surface text-on-background'}`}>
+    <div className={`school-workspace classic-admin flex h-screen overflow-hidden font-['Inter'] ${dark ? 'bg-[#1a1c1e] text-[#f0f0f3]' : 'bg-surface text-on-background'}`}>
       {/* ── Desktop Sidebar ── */}
       <aside
         className={`hidden md:flex flex-col h-screen py-3 px-2 border-r shrink-0 overflow-y-auto admin-scrollbar w-[260px] lg:w-[280px] ${dark ? 'border-[#3c4a46]/60 bg-gradient-to-b from-[#2f3133] to-[#262829]' : 'border-outline-variant/60 bg-gradient-to-b from-[#f7f7fa] to-[#eeeeef]'
@@ -223,7 +242,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <button
               className="md:hidden p-1.5 rounded-lg hover:bg-surface-container-high"
-              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation" onClick={() => setMobileOpen(true)}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>menu</span>
             </button>
@@ -235,22 +254,14 @@ export default function AdminPage() {
               <input
                 type="text"
                 className="admin-input pl-10 pr-4 h-10 rounded-xl w-64 md:w-80 lg:w-96"
-                placeholder="     Search students, teachers, classes..."
+                aria-label="Find a page" value={navSearch} onChange={e => setNavSearch(e.target.value)} placeholder="     Find a page…"
               />
+              {navSearch && <div className="absolute top-full left-0 w-full mt-2 rounded-xl border bg-white dark:bg-[#23332d] shadow-lg max-h-72 overflow-auto z-50">{MAPPED_VIEWS.filter(v => v.toLowerCase().includes(navSearch.toLowerCase())).map(v => <button className="block w-full text-left p-3 hover:bg-primary/10" key={v} onClick={() => {setActiveItem(v);setNavSearch('');}}>{v === 'dashboard' ? 'Dashboard' : v}</button>)}</div>}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Quick Stat */}
-            <div className="hidden md:flex items-center gap-2 mr-2 border-r border-outline-variant/60 pr-4">
-              <span className="text-[12px] font-medium text-on-surface-variant">
-                <span className="font-bold text-primary">1,245</span> Students
-              </span>
-              <span className="text-outline-variant">|</span>
-              <span className="text-[12px] font-medium text-on-surface-variant">
-                <span className="font-bold text-secondary">86</span> Teachers
-              </span>
-            </div>
+            <div className="hidden lg:block text-right mr-3"><p className="text-sm font-semibold">{user?.schoolName}</p><p className="text-xs text-outline">{user?.email}</p></div>
 
             <button
               onClick={() => setDark(!dark)}
@@ -260,9 +271,9 @@ export default function AdminPage() {
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{dark ? 'light_mode' : 'dark_mode'}</span>
             </button>
 
-            <button className={`p-1.5 rounded-full relative transition-colors ${dark ? 'hover:bg-[#3c4a46] text-[#f0f0f3]' : 'hover:bg-surface-container text-on-surface-variant'}`}>
+            <button aria-label="Open notifications" onClick={() => setActiveItem('Notifications')} className={`p-1.5 rounded-full relative transition-colors ${dark ? 'hover:bg-[#3c4a46] text-[#f0f0f3]' : 'hover:bg-surface-container text-on-surface-variant'}`}>
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-error rounded-full border border-surface" />
+
             </button>
 
             <div className={`h-8 w-8 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-offset-1 ${dark ? 'ring-primary/50 ring-offset-[#1a1c1e] bg-[#3c4a46]' : 'ring-primary/30 ring-offset-white bg-gradient-to-br from-primary to-[#00897b]'}`}>
@@ -273,6 +284,7 @@ export default function AdminPage() {
 
         {/* ── Views ── */}
         {activeItem === 'dashboard' && <AdminDashboard dark={dark} onNavigate={setActiveItem} />}
+        {EDUCATION_VIEWS[activeItem] && <EducationView view={activeItem} />}
         {activeItem === 'Student Management' && <StudentsView dark={dark} />}
         {activeItem === 'Teacher Management' && <TeachersView dark={dark} />}
         {activeItem === 'Classes & Sections' && <ClassesView dark={dark} />}
@@ -300,6 +312,7 @@ export default function AdminPage() {
         {activeItem === 'User & Role Management' && <UserRolesView dark={dark} />}
         {activeItem === 'Notifications' && <NoticesView dark={dark} />}
         {activeItem === 'School Settings' && <SchoolSettingsView dark={dark} tab="profile" />}
+        {activeItem === 'Platform Support' && <SupportView />}
         {activeItem === 'My Profile' && <MyProfileView dark={dark} />}
 
         {/* Catch-all for theme-matched unimplemented pages */}

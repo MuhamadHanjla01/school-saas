@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'labItem' });
 const prisma = require('../prismaClient');
 
 // Get all lab items
 router.get('/', async (req, res) => {
   try {
     const items = await prisma.labItem.findMany({
-      where: { schoolId: req.tenant.id },
+      where: { schoolId: req.schoolId },
       orderBy: { createdAt: 'desc' }
     });
     res.json(items);
@@ -22,7 +24,7 @@ router.post('/', async (req, res) => {
     const { id, itemId, name, category, quantity, status } = req.body;
     if (id) {
       const item = await prisma.labItem.update({
-        where: { id },
+        where: { id, schoolId: req.schoolId },
         data: { name, category, quantity, status }
       });
       res.json(item);
@@ -34,7 +36,7 @@ router.post('/', async (req, res) => {
           category,
           quantity,
           status,
-          schoolId: req.tenant.id
+          schoolId: req.schoolId
         }
       });
       res.status(201).json(item);
@@ -48,7 +50,7 @@ router.post('/', async (req, res) => {
 // Delete lab item
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.labItem.delete({ where: { id: req.params.id } });
+    await prisma.labItem.delete({ where: { id: req.params.id, schoolId: req.schoolId } });
     res.json({ message: 'Lab item deleted' });
   } catch (error) {
     console.error(error);

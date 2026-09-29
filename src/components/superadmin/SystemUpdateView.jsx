@@ -4,6 +4,8 @@ import axios from 'axios';
 const typeColors = { Major: 'bg-[#9d4224]/10 text-[#9d4224]', Minor: 'bg-[#0060ac]/10 text-[#0060ac]', Patch: 'bg-[#006b5c]/10 text-[#006b5c]' };
 
 export default function SystemUpdateView({ dark, setToast }) {
+  const [feedback, setFeedback] = useState(null);
+  const notify = value => { setFeedback(value); setToast?.(value); };
   const [checking, setChecking] = useState(false);
   const [versions, setVersions] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -12,12 +14,10 @@ export default function SystemUpdateView({ dark, setToast }) {
 
   const fetchVersions = async () => {
     try {
-      const res = await axios.get('/api/app-update', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await axios.get('/api/app-update');
       setVersions(res.data);
     } catch (error) {
-      setToast?.({ message: 'Failed to fetch update history', type: 'error' });
+      notify({ message: 'Failed to fetch update history', type: 'error' });
     }
   };
 
@@ -29,27 +29,25 @@ export default function SystemUpdateView({ dark, setToast }) {
     setChecking(true);
     fetchVersions().then(() => {
       setChecking(false);
-      setToast?.({ message: 'Update history refreshed!', type: 'success' });
+      notify({ message: 'Update history refreshed!', type: 'success' });
     });
   };
 
   const handleRelease = async (e) => {
     e.preventDefault();
     if (!newVersion.version || !newVersion.downloadUrl) {
-      return setToast?.({ message: 'Version and Download URL are required', type: 'error' });
+      return notify({ message: 'Version and Download URL are required', type: 'error' });
     }
     
     setIsSubmitting(true);
     try {
-      await axios.post('/api/app-update', newVersion, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setToast?.({ message: 'New version released successfully!', type: 'success' });
+      await axios.post('/api/app-update', newVersion);
+      notify({ message: 'New version released successfully!', type: 'success' });
       setShowModal(false);
       setNewVersion({ version: '', downloadUrl: '', releaseNotes: '', forceUpdate: false });
       fetchVersions();
     } catch (error) {
-      setToast?.({ message: 'Failed to release version', type: 'error' });
+      notify({ message: 'Failed to release version', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -59,6 +57,7 @@ export default function SystemUpdateView({ dark, setToast }) {
 
   return (
     <div className={`p-4 md:p-6 lg:p-8 space-y-6 mx-auto w-full max-w-[1600px] font-['Inter'] ${dark ? 'text-[#f0f0f3]' : 'text-[#1a1c1e]'}`}>
+      <>{feedback && <p role="status">{feedback.message}</p>}</>
       <div className="flex items-center justify-between">
         <div>
           <div className={`flex items-center gap-2 text-sm mb-2 ${dark ? 'text-[#bbcac4]' : 'text-[#6c7a76]'}`}><span>Dashboard</span><span className="material-symbols-outlined text-[16px]">chevron_right</span><span>Settings</span><span className="material-symbols-outlined text-[16px]">chevron_right</span><span className="text-[#006b5c] font-medium">System Update</span></div>

@@ -13,7 +13,7 @@ export default function TransportView({ dark }) {
 
   const fetchRoutes = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/transport`, { withCredentials: true });
       setRoutes(res.data);
     } catch (error) {
       console.error(error);
@@ -33,7 +33,7 @@ export default function TransportView({ dark }) {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport`, {
+      await axios.post(`${import.meta.env.VITE_API_URL || ''}/api/transport`, {
         ...form,
         routeName: form.routeName || form.name,
         vehicleNumber: form.vehicleNumber || form.bus,
@@ -51,7 +51,7 @@ export default function TransportView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Delete this route?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/transport/${id}`, { withCredentials: true });
+      await axios.delete(`${import.meta.env.VITE_API_URL || ''}/api/transport/${id}`, { withCredentials: true });
       setToast({ message: 'Route deleted', type: 'success' });
       fetchRoutes();
     } catch (error) {

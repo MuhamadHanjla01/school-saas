@@ -1,3 +1,4 @@
+import '../app_config.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -107,7 +108,7 @@ void onStart(ServiceInstance service) async {
       currentUserId = p.getString('user_id');
     }
     
-    socket = IO.io('https://erpzo-backend.onrender.com', IO.OptionBuilder()
+    socket = IO.io(AppConfig.apiUrl, IO.OptionBuilder()
       .setTransports(['websocket'])
       .disableAutoConnect()
       .setExtraHeaders({'Authorization': 'Bearer $token'})

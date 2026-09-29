@@ -35,7 +35,8 @@ class ResponseCache {
    * - Any custom vary keys passed by the route
    */
   buildKey(req, varyKeys = []) {
-    const parts = [req.method, req.originalUrl || req.url];
+    // Trusted server context is mandatory: client-supplied headers cannot partition tenant data.
+    const parts = [req.method, req.originalUrl || req.url, `school:${req.schoolId || req.user?.schoolId || 'public'}`, `user:${req.user?.userId || 'anonymous'}`, `role:${req.user?.role || ''}`];
 
     // Locale variation
     const locale = req.headers['accept-language'] || 'default';
@@ -84,6 +85,7 @@ class ResponseCache {
    * @param {string[]} opts.tags  – Tags for group invalidation
    */
   set(key, data, opts = {}) {
+    if (this.store.has(key)) this._evict(key);
     // Evict oldest if at capacity
     if (this.store.size >= this.maxEntries && !this.store.has(key)) {
       const oldestKey = this.store.keys().next().value;
@@ -120,8 +122,8 @@ class ResponseCache {
     const keys = this.tagIndex.get(tag);
     if (!keys) return 0;
     let count = 0;
-    for (const key of keys) {
-      this.store.delete(key);
+    for (const key of [...keys]) {
+      this._evict(key);
       count++;
     }
     this.tagIndex.delete(tag);
@@ -265,4 +267,4 @@ function _revalidate(req, opts, key) {
   });
 }
 
-module.exports = { cache, cached };
+module.exports = { ResponseCache, cache, cached };

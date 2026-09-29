@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { portalForRole } from '../../context/sessionClient';
 
 const SLIDES = [
   {
@@ -28,7 +29,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
-  const { login, forgotPassword } = useAuth();
+  const location = useLocation();
+  const { user: currentUser, login, forgotPassword } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -39,38 +42,41 @@ export default function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     setError('');
     setSuccessMsg('');
     try {
       const user = await login(email, password);
-      if (user.role === 'SuperAdmin') {
-        navigate('/superadmin');
-      } else if (user.role === 'SchoolAdmin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      const portal = portalForRole(user.role);
+      const from = location.state?.from;
+      const path = from?.pathname;
+      navigate(path === portal || path?.startsWith(`${portal}/`) ? `${path}${from.search || ''}` : portal, { replace: true });
     } catch (err) {
-      setError('Invalid email or password');
-    }
+      setError(err.response?.data?.error || 'Unable to sign in. Check your connection and try again.');
+    } finally { setSubmitting(false); }
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     if (!email) {
       setError('Please enter your email address to reset password.');
       setSuccessMsg('');
       return;
     }
     setError('');
+    setSubmitting(true);
     try {
       const res = await forgotPassword(email);
       setSuccessMsg(res.message || 'Password reset link sent.');
     } catch (err) {
-      setError('Error sending reset link.');
+      setError(err.response?.data?.error || 'Unable to send a reset link. Please try again.');
       setSuccessMsg('');
-    }
+    } finally { setSubmitting(false); }
   };
+
+  if (currentUser) return <Navigate to={portalForRole(currentUser.role)} replace />;
 
   return (
     <div className="flex min-h-screen w-full flex-col md:flex-row bg-background">

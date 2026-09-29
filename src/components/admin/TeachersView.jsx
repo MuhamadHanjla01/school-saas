@@ -1,3 +1,4 @@
+import { FormDialog } from '../shared/AdminWorkspace';
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Modal, Toast } from './AdminPage';
@@ -58,6 +59,8 @@ function CustomSelect({ value, onChange, options, dark, placeholder, className }
 }
 
 export default function TeachersView({ dark }) {
+  const [adding, setAdding] = useState(false);
+  const [revision, setRevision] = useState(0);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -91,7 +94,7 @@ export default function TeachersView({ dark }) {
       return;
     }
     try {
-      await axios.put(`https://erpzo-backend.onrender.com/api/teachers/${promoteForm.teacherId}/promote`, {
+      await axios.put(`/api/teachers/${promoteForm.teacherId}/promote`, {
         classId: promoteForm.classId,
         department: promoteForm.department,
         title: promoteForm.title
@@ -100,7 +103,7 @@ export default function TeachersView({ dark }) {
       setPromoteModalOpen(false);
       setPromoteForm({ teacherId: '', classId: '', department: '', title: '' });
       // Reload teachers to reflect changes
-      const res = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
+      const res = await axios.get('/api/teachers');
       setTeachers(res.data.teachers.map(t => ({
         ...t,
         id_db: t.id,
@@ -119,7 +122,7 @@ export default function TeachersView({ dark }) {
     e.preventDefault();
     if (!resetForm.newPassword) return;
     try {
-      const res = await axios.post(`https://erpzo-backend.onrender.com/api/teachers/${resetPasswordTeacher.id}/reset-password`, {
+      const res = await axios.post(`/api/teachers/${resetPasswordTeacher.id}/reset-password`, {
         newPassword: resetForm.newPassword,
         oldPassword: resetForm.oldPassword
       });
@@ -148,13 +151,13 @@ export default function TeachersView({ dark }) {
         formData.append('avatar', editForm.avatar);
       }
 
-      await axios.put(`https://erpzo-backend.onrender.com/api/teachers/${dbId}`, formData);
+      await axios.put(`/api/teachers/${dbId}`, formData);
       
       setToast({ message: `Teacher updated successfully`, type: 'success' });
       setEditTeacher(null);
       
       // Reload teachers
-      const res = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
+      const res = await axios.get('/api/teachers');
       setTeachers(res.data.teachers.map(t => ({
         ...t,
         id_db: t.id,
@@ -172,7 +175,7 @@ export default function TeachersView({ dark }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const resTeachers = await axios.get('https://erpzo-backend.onrender.com/api/teachers');
+        const resTeachers = await axios.get('/api/teachers');
         if (resTeachers.data?.teachers) {
           const formatted = resTeachers.data.teachers.map(t => ({
             ...t,
@@ -191,14 +194,14 @@ export default function TeachersView({ dark }) {
       }
 
       try {
-        const resClasses = await axios.get('https://erpzo-backend.onrender.com/api/classes');
+        const resClasses = await axios.get('/api/classes');
         setClasses(resClasses.data?.classes || []);
       } catch (err) {
         console.error('Failed to fetch classes', err);
       }
     };
     fetchData();
-  }, []);
+  }, [revision]);
 
   const toggleExpand = (id) => {
     const next = new Set(expandedRows);
@@ -231,6 +234,8 @@ export default function TeachersView({ dark }) {
 
   return (
     <div className={`p-5 lg:p-10 flex-1 space-y-6 animate-fadeIn ${dark ? 'bg-[#1a1c1e] text-white' : 'bg-background text-on-surface'}`}>
+      <button className="workspace-primary px-4 py-2 rounded-xl bg-primary text-white" onClick={() => setAdding(true)}>Add teacher</button>
+      {adding && <FormDialog title="Add teacher" fields={[{name:'name',label:'Name',required:true},{name:'department',label:'Department',required:true},{name:'phone',label:'Phone',required:true},{name:'email',label:'Login email',type:'email',required:true},{name:'password',label:'Password',type:'password',required:true}]} onSave={async values=>{await axios.post('/api/teachers',values);setRevision(v=>v+1);}} onClose={()=>setAdding(false)} />}
       {/* Header & Title */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'assignment', writeRoles: [...ADMIN_ROLES, 'Teacher'] });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -12,6 +14,7 @@ router.get('/', async (req, res) => {
     if (classId) where.classId = classId;
     if (teacherId) where.teacherId = teacherId;
     if (subjectId) where.subjectId = subjectId;
+    Object.assign(where, classScope(req));
 
     const assignments = await dbCall(() => prisma.assignment.findMany({
       where,
@@ -83,7 +86,7 @@ router.put('/:id', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']), async (r
   try {
     const { title, description, dueDate, status } = req.body;
     const assignment = await dbCall(() => prisma.assignment.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { title, description, dueDate: dueDate ? new Date(dueDate) : undefined, status },
     }));
     res.json({ assignment });
@@ -96,7 +99,7 @@ router.put('/:id', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']), async (r
 // DELETE /api/assignments/:id — delete assignment
 router.delete('/:id', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']), async (req, res) => {
   try {
-    await dbCall(() => prisma.assignment.delete({ where: { id: req.params.id } }));
+    await dbCall(() => prisma.assignment.delete({ where: { id: req.params.id, schoolId: req.schoolId } }));
     res.json({ message: 'Assignment deleted' });
   } catch (error) {
     console.error('[assignments] DELETE error:', error.message);

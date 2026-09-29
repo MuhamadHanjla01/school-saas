@@ -1,0 +1,24 @@
+/* Original admin visual language, applied to the live workflows. */
+.classic-admin{--panel:#fff;--line:#e2e2e5;--muted:#6c7a76}
+.dark .classic-admin,.classic-admin.dark{--panel:#2f3133;--line:#3c4a46;--muted:#bbcac4}
+.classic-admin .workspace-section{padding:24px;max-width:1600px}
+.classic-admin .workspace-section h1{font-size:24px;letter-spacing:-.5px}
+.classic-admin .workspace-section p{font-size:12px}
+.classic-admin .workspace-card,.classic-admin .workspace-table{border-radius:20px;border-color:var(--line);box-shadow:0 1px 3px #00000008,0 6px 24px #00000008}
+.classic-admin .workspace-heading{margin-bottom:20px}
+.classic-admin .workspace-section button{border-radius:12px;font-size:12px;transition:box-shadow .2s,transform .2s}
+.classic-admin .workspace-section button.workspace-primary{background:linear-gradient(135deg,#006b5c,#00897b);box-shadow:0 4px 14px #006b5c26}
+.classic-admin .workspace-section button:hover{box-shadow:0 4px 12px #006b5c15;transform:translateY(-1px)}
+.classic-admin .workspace-table th{font-size:10px;background:#f3f3f6;color:#6c7a76}
+.classic-admin .workspace-table td{font-size:12px;padding:12px 18px}
+.classic-admin .workspace-input{border-radius:12px;font-size:12px;background:var(--panel)}
+.classic-admin .workspace-stat strong{font-size:24px}
+.classic-admin .workspace-stats{gap:12px}
+.classic-quick-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);box-shadow:0 1px 4px #00000008;font-size:11px;transition:transform .2s,box-shadow .2s}
+.classic-quick-action .material-symbols-outlined{color:#006b5c;padding:10px;background:#006b5c0d;border-radius:12px}
+.classic-quick-action:hover{transform:translateY(-3px);box-shadow:0 8px 24px #006b5c18}
+.dark .classic-admin .workspace-table th{background:#262829;color:#bbcac4}
+.classic-admin button:focus-visible{outline:2px solid #00897b;outline-offset:3px}
+@media(max-width:640px){.classic-admin .workspace-section{padding:16px}}
+
+.classic-admin .workspace-card h2{font-size:14px;font-weight:700}.classic-admin .workspace-card p{font-size:12px;line-height:1.65;color:var(--muted);margin:8px 0}.classic-admin .workspace-card button{font-size:11px;font-weight:600;color:#006b5c}.classic-admin .workspace-card progress{height:6px;border-radius:6px;overflow:hidden;accent-color:#006b5c}.classic-admin .workspace-card progress::-webkit-progress-bar{background:#006b5c12}.classic-admin .workspace-card progress::-webkit-progress-value{background:linear-gradient(90deg,#006b5c,#00b89c)}

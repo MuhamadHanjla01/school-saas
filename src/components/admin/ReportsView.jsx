@@ -9,7 +9,7 @@ function LineChart({ data, color, height = 200 }) {
   
   const width = 1000;
   const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * width;
+    const x = (i / Math.max(1, data.length - 1)) * width;
     const y = height - ((d.value - min) / (max - min)) * height;
     return `${x},${y}`;
   }).join(' ');
@@ -33,7 +33,7 @@ function LineChart({ data, color, height = 200 }) {
         />
         {/* Points */}
         {data.map((d, i) => {
-          const x = (i / (data.length - 1)) * width;
+          const x = (i / Math.max(1, data.length - 1)) * width;
           const y = height - ((d.value - min) / (max - min)) * height;
           return (
             <g key={i} className="hover:opacity-100 transition-opacity cursor-pointer">
@@ -100,7 +100,7 @@ export default function ReportsView({ dark }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/reports/dashboard-stats`, { withCredentials: true });
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/reports/dashboard-stats`, { withCredentials: true });
         setStats(res.data);
       } catch (err) {
         console.error('Failed to fetch stats', err);
@@ -111,23 +111,8 @@ export default function ReportsView({ dark }) {
     fetchStats();
   }, []);
 
-  // Dummy data for charts to make it look premium
-  const revenueData = [
-    { label: 'Jan', value: 45000 },
-    { label: 'Feb', value: 52000 },
-    { label: 'Mar', value: 48000 },
-    { label: 'Apr', value: 61000 },
-    { label: 'May', value: 59000 },
-    { label: 'Jun', value: 75000 },
-  ];
-
-  const attendanceData = [
-    { label: 'Mon', value: 95 },
-    { label: 'Tue', value: 92 },
-    { label: 'Wed', value: 96 },
-    { label: 'Thu', value: 94 },
-    { label: 'Fri', value: 89 },
-  ];
+  const revenueData = stats?.revenueData || [];
+  const attendanceData = stats?.attendanceData || [];
 
   return (
     <div className={`p-5 lg:p-10 flex-1 space-y-8 animate-fadeIn ${dark ? 'bg-[#1a1c1e] text-white' : 'bg-background text-on-surface'}`}>
@@ -175,7 +160,7 @@ export default function ReportsView({ dark }) {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className={`font-bold text-lg ${dark ? 'text-white' : 'text-[#1a1c1e]'}`}>Revenue Growth</h3>
-                  <p className={`text-xs ${dark ? 'text-[#bbcac4]' : 'text-outline'}`}>Monthly fee collections</p>
+                  <p className={`text-xs ${dark ? 'text-[#bbcac4]' : 'text-outline'}`}>Monthly fee collections ({stats?.currency?.toUpperCase()})</p>
                 </div>
                 <button className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${dark ? 'border-[#3c4a46] hover:bg-[#3c4a46]' : 'border-outline-variant hover:bg-surface-container'}`}>
                   <span className="material-symbols-outlined text-[18px]">more_vert</span>

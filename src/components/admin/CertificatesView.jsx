@@ -9,7 +9,7 @@ export default function CertificatesView({ dark }) {
   
   const fetchCertificates = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/certificates`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/certificates`, { withCredentials: true });
       setCertificates(res.data);
     } catch (error) {
       console.error(error);

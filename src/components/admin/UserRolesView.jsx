@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Modal, Toast } from './AdminPage';
+import { useDebouncedSearch } from '../../hooks/useDebouncedSearch';
 
 export default function UserRolesView({ dark }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Filters
-  const [search, setSearch] = useState('');
+  // Filters (debounced to avoid re-rendering on every keystroke)
+  const { query: search, setQuery: setSearch, debouncedQuery } = useDebouncedSearch({ delay: 250 });
   
   // Modal forms
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, username: '', email: '', role: 'Teacher', password: '' });
+  const [form, setForm] = useState({ id: null, name: '', email: '', role: 'Staff', password: '' });
   const [toast, setToast] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('https://erpzo-backend.onrender.com/api/users');
+      const res = await axios.get('/api/users');
       setUsers(res.data.users || []);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -35,15 +36,19 @@ export default function UserRolesView({ dark }) {
     e.preventDefault();
     try {
       if (form.id) {
-        // In real app, separate password change from profile update
-        await axios.put(`https://erpzo-backend.onrender.com/api/users/${form.id}`, {
-          username: form.username,
+        await axios.put(`/api/users/${form.id}`, {
+          name: form.name,
           email: form.email,
           role: form.role
         });
         setToast({ message: 'User updated successfully', type: 'success' });
       } else {
-        await axios.post('https://erpzo-backend.onrender.com/api/users', form);
+        await axios.post('/api/users', {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+          password: form.password
+        });
         setToast({ message: 'User created successfully', type: 'success' });
       }
       setModalOpen(false);
@@ -57,23 +62,24 @@ export default function UserRolesView({ dark }) {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`https://erpzo-backend.onrender.com/api/users/${id}`);
+      await axios.delete(`/api/users/${id}`);
       setToast({ message: 'User deleted', type: 'success' });
       fetchUsers();
     } catch (err) {
-      setToast({ message: 'Failed to delete user', type: 'error' });
+      setToast({ message: err.response?.data?.error || 'Failed to delete user', type: 'error' });
     }
   };
 
-  const q = search.toLowerCase();
+  const q = debouncedQuery.toLowerCase();
   const filtered = users.filter(u => 
-    (u.username || '').toLowerCase().includes(q) || 
+    !q ||
+    (u.name || '').toLowerCase().includes(q) || 
     (u.email || '').toLowerCase().includes(q) ||
     (u.role || '').toLowerCase().includes(q)
   );
 
   const openAddModal = () => {
-    setForm({ id: null, username: '', email: '', role: 'Teacher', password: '' });
+    setForm({ id: null, name: '', email: '', role: 'Staff', password: '' });
     setModalOpen(true);
   };
 
@@ -81,10 +87,10 @@ export default function UserRolesView({ dark }) {
     e.stopPropagation();
     setForm({
       id: u.id,
-      username: u.username,
+      name: u.name || '',
       email: u.email,
       role: u.role,
-      password: '' // Don't populate password on edit
+      password: ''
     });
     setModalOpen(true);
   };
@@ -124,9 +130,9 @@ export default function UserRolesView({ dark }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {[
           { label: 'Total Users', value: users.length, icon: 'group', color: '#0060ac' },
-          { label: 'Administrators', value: users.filter(u => u.role.includes('Admin')).length, icon: 'shield_person', color: '#9d4224' },
+          { label: 'Administrators', value: users.filter(u => (u.role || '').includes('Admin')).length, icon: 'shield_person', color: '#9d4224' },
           { label: 'Teachers', value: users.filter(u => u.role === 'Teacher').length, icon: 'school', color: '#006b5c' },
-          { label: 'Staff/Others', value: users.filter(u => !['SuperAdmin', 'SchoolAdmin', 'Teacher'].includes(u.role)).length, icon: 'badge', color: '#5b5f62' },
+          { label: 'Students/Others', value: users.filter(u => !['SuperAdmin', 'SchoolAdmin', 'Teacher'].includes(u.role)).length, icon: 'badge', color: '#5b5f62' },
         ].map((stat, i) => (
           <div key={i} className={`p-6 rounded-[24px] shadow-sm flex items-center justify-between ${dark ? 'bg-[#2f3133]' : 'bg-white'}`}>
             <div>
@@ -177,14 +183,15 @@ export default function UserRolesView({ dark }) {
                 </tr>
               ) : (
                 filtered.map(u => {
-                  const initials = (u.username || 'U').substring(0, 2).toUpperCase();
+                  const displayName = u.name || u.email?.split('@')[0] || 'User';
+                  const initials = displayName.substring(0, 2).toUpperCase();
                   return (
                     <tr key={u.id} className={`border-b last:border-0 transition-colors group ${dark ? 'border-[#3c4a46] hover:bg-[#3c4a46]/30' : 'border-[#eeeef0] hover:bg-[#f3f3f6]'}`}>
                       <td className="p-4 pl-6 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-primary to-[#00897b] text-white font-bold shadow-sm">
                           {initials}
                         </div>
-                        <div className={`font-semibold text-sm ${dark ? 'text-white' : 'text-[#1a1c1e]'}`}>{u.username}</div>
+                        <div className={`font-semibold text-sm ${dark ? 'text-white' : 'text-[#1a1c1e]'}`}>{displayName}</div>
                       </td>
                       <td className={`p-4 ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>{u.email || 'N/A'}</td>
                       <td className="p-4">
@@ -193,7 +200,7 @@ export default function UserRolesView({ dark }) {
                         </span>
                       </td>
                       <td className={`p-4 text-xs ${dark ? 'text-[#bbcac4]' : 'text-on-surface-variant'}`}>
-                        {new Date(u.updatedAt).toLocaleDateString()}
+                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never'}
                       </td>
                       <td className="p-4 pr-6">
                         <div className="flex items-center justify-end gap-2">
@@ -220,8 +227,8 @@ export default function UserRolesView({ dark }) {
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold mb-1">Username *</label>
-                <input required type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} className={`w-full p-2.5 rounded-xl border focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border-[#3c4a46] text-white' : 'bg-surface border-outline-variant text-[#1a1c1e]'}`} />
+                <label className="block text-[11px] font-semibold mb-1">Name</label>
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className={`w-full p-2.5 rounded-xl border focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border-[#3c4a46] text-white' : 'bg-surface border-outline-variant text-[#1a1c1e]'}`} placeholder="Full name" />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold mb-1">Email *</label>
@@ -234,9 +241,9 @@ export default function UserRolesView({ dark }) {
                 <label className="block text-[11px] font-semibold mb-1">Role *</label>
                 <select value={form.role} onChange={e => setForm({...form, role: e.target.value})} className={`w-full p-2.5 rounded-xl border focus:ring-2 focus:ring-primary transition-all text-sm ${dark ? 'bg-[#1a1c1e] border-[#3c4a46] text-white' : 'bg-surface border-outline-variant text-[#1a1c1e]'}`}>
                   <option>SchoolAdmin</option>
-                  <option>Teacher</option>
+                  {form.id && <option>Teacher</option>}
                   <option>Staff</option>
-                  <option>Student</option>
+                  {form.id && <option>Student</option>}
                 </select>
               </div>
               {!form.id && (

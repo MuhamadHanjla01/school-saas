@@ -22,7 +22,7 @@ export default function SchoolDetailsView({ dark, schoolId, schoolName = "Oakrid
     const fetchUsers = async () => {
       if (!schoolId) return;
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${schoolId}/users`, { withCredentials: true });
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/superadmin/tenants/schools/${schoolId}/users`, { withCredentials: true });
         setUsers(res.data);
       } catch (error) {
         console.error('Failed to fetch school users:', error);

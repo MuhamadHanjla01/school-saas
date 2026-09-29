@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'exam', readRoles: [...STAFF_ROLES, 'Student'], writeRoles: [...ADMIN_ROLES, 'Teacher'] });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -8,7 +10,7 @@ const { checkRole } = require('../middleware/authMiddleware');
 router.get('/', async (req, res) => {
   try {
     const exams = await dbCall(() => prisma.exam.findMany({
-      where: { schoolId: req.schoolId },
+      where: { schoolId: req.schoolId, ...(req.user.role === 'Student' ? { examClasses: { some: { classId: req.user.classId || noProfileId } } } : {}) },
       include: {
         examClasses: { include: { class: { select: { name: true } } } },
       },
@@ -68,7 +70,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
   try {
     const { name, type, startDate, endDate, status } = req.body;
     const exam = await dbCall(() => prisma.exam.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: {
         name, type, status,
         startDate: startDate ? new Date(startDate) : undefined,
@@ -86,7 +88,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
 router.get('/:id/results', async (req, res) => {
   try {
     const results = await dbCall(() => prisma.examResult.findMany({
-      where: { examId: req.params.id },
+      where: { examId: req.params.id, exam: { schoolId: req.schoolId }, student: { schoolId: req.schoolId }, ...studentScope(req) },
       include: {
         student: { select: { name: true, studentId: true, class: { select: { name: true } } } },
         subject: { select: { name: true } },
@@ -150,14 +152,15 @@ router.post('/:id/results', checkRole(['Teacher', 'SchoolAdmin', 'SuperAdmin']),
 // GET /api/report-card/:studentId — generate report card
 router.get('/report-card/:studentId', async (req, res) => {
   try {
+    await requireRecord(req, 'student', req.params.studentId);
     const student = await dbCall(() => prisma.student.findUnique({
-      where: { id: req.params.studentId },
+      where: { id: req.params.studentId, schoolId: req.schoolId },
       include: { class: { select: { name: true } } },
     }));
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
     const results = await prisma.examResult.findMany({
-      where: { studentId: req.params.studentId },
+      where: { studentId: req.params.studentId, student: { schoolId: req.schoolId }, exam: { schoolId: req.schoolId } },
       include: {
         exam: { select: { name: true, type: true } },
         subject: { select: { name: true } },

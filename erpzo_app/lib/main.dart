@@ -1,3 +1,4 @@
+import 'app_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'api_client.dart';
@@ -662,6 +663,7 @@ class _LoginPageState extends State<LoginPage> {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppConfig.validate();
   await initializeBackgroundService();
   runApp(
     MaterialApp(

@@ -16,7 +16,7 @@ export default function LibraryView({ dark }) {
 
   const fetchBooks = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/library`, { withCredentials: true });
       setBooks(res.data);
     } catch (error) {
       console.error(error);
@@ -41,7 +41,7 @@ export default function LibraryView({ dark }) {
   const handleSaveBook = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library`, form, { withCredentials: true });
+      await axios.post(`${import.meta.env.VITE_API_URL || ''}/api/library`, form, { withCredentials: true });
       setToast({ message: 'Book added successfully', type: 'success' });
       setModalOpen(false);
       fetchBooks();
@@ -54,7 +54,7 @@ export default function LibraryView({ dark }) {
   const handleIssueBook = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${issueForm.bookId}`, {
+      await axios.put(`${import.meta.env.VITE_API_URL || ''}/api/library/${issueForm.bookId}`, {
         status: 'Issued',
         issuedTo: issueForm.issuedTo,
         dueDate: issueForm.dueDate
@@ -71,7 +71,7 @@ export default function LibraryView({ dark }) {
   const handleReturnBook = async (id) => {
     if (!confirm('Mark this book as returned?')) return;
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${id}`, {
+      await axios.put(`${import.meta.env.VITE_API_URL || ''}/api/library/${id}`, {
         status: 'Available',
         issuedTo: null,
         dueDate: null
@@ -87,7 +87,7 @@ export default function LibraryView({ dark }) {
   const handleDelete = async (id) => {
     if (!confirm('Delete this book?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/library/${id}`, { withCredentials: true });
+      await axios.delete(`${import.meta.env.VITE_API_URL || ''}/api/library/${id}`, { withCredentials: true });
       setToast({ message: 'Book deleted', type: 'success' });
       fetchBooks();
     } catch (error) {

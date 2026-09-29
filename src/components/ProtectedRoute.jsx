@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { portalForRole } from '../context/sessionClient';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
@@ -17,7 +18,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Logged in, but wrong role
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to={portalForRole(user.role)} replace />;
   }
 
   return children;

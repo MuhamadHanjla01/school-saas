@@ -41,7 +41,7 @@ export default function CommunicationView({ dark }) {
   const fetchMessages = useCallback(async (userId = '') => {
     try {
       setLoading(true);
-      const url = userId ? `https://erpzo-backend.onrender.com/api/school/messages?withUser=${userId}` : 'https://erpzo-backend.onrender.com/api/school/messages';
+      const url = userId ? `/api/school/messages?withUser=${userId}` : '/api/school/messages';
       const res = await axios.get(url);
       setMessages(res.data.messages.reverse() || []);
       scrollToBottom();
@@ -55,8 +55,8 @@ export default function CommunicationView({ dark }) {
   const fetchUsers = async () => {
     try {
       const [resT, resS] = await Promise.all([
-        axios.get('https://erpzo-backend.onrender.com/api/teachers'),
-        axios.get('https://erpzo-backend.onrender.com/api/students')
+        axios.get('/api/teachers'),
+        axios.get('/api/students')
       ]);
       const formatted = [
         ...(resT.data.teachers || []).map(t => ({ id: t.userId, name: t.name, role: 'Teacher' })),
@@ -95,7 +95,7 @@ export default function CommunicationView({ dark }) {
     e.preventDefault();
     if (!selectedUserId || !content.trim()) return;
     try {
-      await axios.post('https://erpzo-backend.onrender.com/api/school/messages', { receiverId: selectedUserId, content });
+      await axios.post('/api/school/messages', { receiverId: selectedUserId, content });
       setContent('');
       fetchMessages(selectedUserId);
     } catch (err) {

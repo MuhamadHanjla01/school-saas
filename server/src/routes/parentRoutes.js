@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'parent', readRoles: ADMIN_ROLES });
 const prisma = require('../prismaClient');
 const { dbCall } = require('../prismaClient');
 const { checkRole } = require('../middleware/authMiddleware');
@@ -56,7 +58,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
   try {
     const { name, phone, email, occupation, address, relationship } = req.body;
     const parent = await dbCall(() => prisma.parent.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { name, phone, email, occupation, address, relationship },
     }));
     res.json({ parent });
@@ -69,7 +71,7 @@ router.put('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) =>
 // DELETE /api/parents/:id
 router.delete('/:id', checkRole(['SchoolAdmin', 'SuperAdmin']), async (req, res) => {
   try {
-    await dbCall(() => prisma.parent.delete({ where: { id: req.params.id } }));
+    await dbCall(() => prisma.parent.delete({ where: { id: req.params.id, schoolId: req.schoolId } }));
     res.json({ message: 'Parent deleted' });
   } catch (error) {
     console.error('[parents] DELETE error:', error.message);

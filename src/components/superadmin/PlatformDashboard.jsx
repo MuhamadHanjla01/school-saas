@@ -1,0 +1,21 @@
+import {useEffect,useState} from 'react';
+import axios from 'axios';
+import ReferenceDashboard,{DashboardPanel,DashboardIcon} from '../shared/ReferenceDashboard';
+import {errorText} from '../shared/AdminWorkspace';
+export default function PlatformDashboard({onNavigate}){
+ const [data,setData]=useState(null),[error,setError]=useState('');
+ useEffect(()=>{const c=new AbortController();Promise.all(['/api/platform/overview','/api/platform/records/inquiries?limit=3','/api/platform/tickets?limit=3'].map(url=>axios.get(url,{signal:c.signal}))).then(([o,i,t])=>setData({...o.data,inquiries:i.data.rows,tickets:t.data.rows})).catch(e=>{if(!axios.isCancel(e))setError(errorText(e));});return()=>c.abort();},[]);
+ if(!data)return <p className="p-6" role={error?'alert':'status'}>{error||'Loading platform dashboard…'}</p>;
+ const total=data.schools.length,active=total?Math.round(data.activeSchools/total*100):0;
+ const revenue=data.revenue.map(r=>new Intl.NumberFormat('en',{style:'currency',currency:r.currency,maximumFractionDigits:0}).format(r.amountMinor/100)).join(' / ')||'0';
+ const link=(label,dest,center=false)=><button className={`reference-link ${center?'center':''}`} onClick={()=>onNavigate(dest)}>{label}<DashboardIcon name="arrow_forward"/></button>;
+ return <ReferenceDashboard title="Welcome back, Platform Administrator" subtitle={`${data.activeSchools} active schools across your platform`} badge="Platform administration" badgeDetail="Schools, subscriptions & support"
+ metrics={[{label:'Total Schools',value:total.toLocaleString(),caption:'Registered institutions',icon:'domain'},{label:'Total Students',value:data.students.toLocaleString(),caption:'Across all schools',icon:'groups',tone:'blue'},{label:'Total Teachers',value:data.teachers.toLocaleString(),caption:'Across all schools',icon:'co_present',tone:'coral'},{label:'User Accounts',value:data.users.toLocaleString(),caption:'Registered accounts',icon:'badge',tone:'cyan'}]}
+ ringTitle="Active Schools" ringValue={active} ringCaption={`${data.activeSchools} of ${total} schools are active.`} ringAction={link('Manage schools','Manage Schools',true)} financeTitle="Platform Subscription Summary"
+ financeCards={[{label:'Recorded Revenue',icon:'account_balance_wallet',value:revenue,percent:data.revenue.length?100:0,caption:'All recorded subscription payments'},{label:'Active Subscriptions',icon:'subscriptions',value:data.activeSubscriptions.toLocaleString(),percent:total?Math.min(100,data.activeSubscriptions/total*100):0,caption:'Schools with an active subscription'}]}
+ actions={[['Onboard School','domain_add','Manage Schools'],['Manage Packages','inventory_2','Package'],['Record Payment','payments','Transactions'],['Support Tickets','support_agent','Ticket Inbox']].map(([label,icon,dest])=>({label,icon,onClick:()=>onNavigate(dest)}))} onChat={()=>onNavigate('Ticket Inbox')}>
+ <DashboardPanel title="Recent Schools" action={link('See all','Manage Schools')}><div className="reference-list">{data.schools.slice(0,3).map(s=><div className="reference-entry reference-exam" key={s.id}><span className="reference-icon"><DashboardIcon name="school"/></span><div><strong>{s.name}</strong><p>{s.isActive?'Active':'Suspended'} · {new Date(s.createdAt).toLocaleDateString()}</p></div></div>)}{!total&&<p className="reference-empty">No schools onboarded yet.</p>}</div></DashboardPanel>
+ <DashboardPanel title="School Inquiries" action={link('See all','School Inquiries')}><div className="reference-list">{data.inquiries.map(i=><div className="reference-entry" key={i.id}><span className="reference-avatar">{(i.school||i.title).slice(0,2).toUpperCase()}</span><div><strong>{i.school||i.title}</strong><p>{i.email}</p></div></div>)}{!data.inquiries.length&&<p className="reference-empty">No school inquiries yet.</p>}</div></DashboardPanel>
+ <DashboardPanel title="Support Inbox" action={link('View all','Ticket Inbox')}><div className="reference-list">{data.tickets.map(t=><div className="reference-entry reference-note" key={t.id}><div><strong>{t.subject}</strong><p>{t.priority} · {t.status}</p></div></div>)}{!data.tickets.length&&<p className="reference-empty">No support tickets yet.</p>}</div></DashboardPanel>
+ </ReferenceDashboard>;
+}

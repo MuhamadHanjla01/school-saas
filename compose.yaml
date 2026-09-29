@@ -1,0 +1,24 @@
+services:
+  erpzo:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/data/erpzo.db
+      UPLOAD_DIR: /data/uploads
+      APP_URL: ${APP_URL:?Set your public HTTPS origin}
+      CORS_ORIGINS: ${APP_URL:?Set your public HTTPS origin}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set a random access signing secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set a separate random refresh signing secret}
+      TRUST_PROXY_HOPS: "1"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - database:/data
+volumes:
+  database:

@@ -1,0 +1,27 @@
+const { field: f } = require('./adminValidation');
+const text = (name, label) => f(name, label, 'text', { required: true });
+const choice = (name, label, options, value = options[0]) => f(name, label, 'select', { options, default: value, required: true });
+const ref = (name, label, model) => f(name, label, 'select', { required: true, model });
+const num = (name, label, min = 0, value = min) => f(name, label, 'number', { min, default: value, required: true });
+const money = (name, label, min = 0) => f(name, label, 'money', { min, default: 0, required: true });
+const date = (name, label) => f(name, label, 'date', { required: true });
+const dates = [date('startDate', 'Start date (AD)'), date('endDate', 'End date (AD)')];
+const employee = [choice('employeeType', 'Employee type', ['Teacher', 'Staff']), ref('employeeId', 'Employee', 'employee')];
+const currency = choice('currency', 'Currency', ['npr', 'inr', 'usd']);
+const catalog = {
+  campuses: { model: 'campus', title: 'Campuses', fields: [text('name','Campus name'), text('code','Code'), f('address','Address')] },
+  departments: { model: 'department', title: 'Departments', fields: [text('name','Department name'), text('code','Code'), ref('campusId','Campus','campus')] },
+  programs: { model: 'program', title: 'Programs', fields: [text('name','Program name'), text('code','Code'), ref('departmentId','Department','department'), choice('level','Level',['School','PlusTwo','Diploma','Bachelor','Master','Doctorate']), choice('system','Academic system',['Annual','Semester','Trimester']), num('duration','Number of years / semesters / trimesters',1), num('requiredCredits','Required credits'), f('affiliatingBody','Affiliating university / board')] },
+  terms: { model: 'academicTerm', title: 'Academic Terms', fields: [text('name','Term name'),text('academicYear','Academic year'),...dates] },
+  courses: { model: 'programCourse', title: 'Program Courses', description: 'Keep a separate curriculum version for each curriculum revision.', fields: [text('name','Course name'),text('code','Course code'),ref('programId','Program','program'),text('curriculumVersion','Curriculum version'),num('termNumber','Term number',1),num('credits','Credits'),f('elective','Elective','checkbox',{default:false})] },
+  enrollments: { model: 'enrollment', title: 'Enrollment History', noDelete: true, description: 'Add a new enrollment for each term. Previous enrollments remain in the student history.', fields: [ref('studentId','Student','student'),ref('programId','Program','program'),ref('termId','Academic term','academicTerm'),text('batch','Batch'),text('curriculumVersion','Curriculum version'),f('rollNumber','Roll number'),choice('status','Status',['Active','Completed','Transferred','Withdrawn'])] },
+  rooms: { model: 'hostelRoom', title: 'Hostel Rooms', fields: [text('building','Building'),text('name','Room'),num('capacity','Number of beds',1)] },
+  allocations: { model: 'hostelAllocation', title: 'Hostel Allocations', noDelete: true, fields: [ref('studentId','Student','student'),ref('roomId','Room','hostelRoom'),num('bedNumber','Bed number',1),...dates,choice('status','Status',['Active','Ended','Cancelled'])] },
+  stops: { model: 'transportStop', title: 'Transport Stops', fields: [ref('routeId','Route','transportRoute'),text('name','Stop name'),num('sequence','Stop order',1),text('pickupTime','Pickup time (HH:mm)'),text('dropTime','Drop-off time (HH:mm)')] },
+  transport: { model: 'transportAssignment', title: 'Transport Assignments', noDelete: true, fields: [ref('studentId','Student','student'),ref('routeId','Route','transportRoute'),ref('stopId','Stop','transportStop'),...dates,choice('status','Status',['Active','Ended','Cancelled'])] },
+  leave: { model: 'leaveRequest', title: 'Staff Leave', noDelete: true, fields: [...employee,choice('category','Category',['Annual','Sick','Unpaid','Other']),...dates,text('reason','Reason'),choice('status','Status',['Pending','Approved','Rejected','Cancelled']),f('decisionNote','Decision note','textarea')] },
+  payroll: { model: 'payrollEntry', title: 'Payroll', noDelete: true, description: 'Prepare a draft, approve it, then record the bank or cash payment reference. Amounts are in the selected currency.', fields: [...employee,text('month','Month (YYYY-MM, AD)'),money('basicMinor','Basic salary'),money('allowancesMinor','Allowances'),money('deductionsMinor','Deductions'),currency,choice('status','Status',['Draft','Approved','Paid']),f('reference','Payment reference')] },
+  invoices: { model: 'studentInvoice', title: 'Individual Invoices', noDelete: true, description: 'Individual charges and installment invoices. Record cash or verified bank payments in Invoice Receipts. Existing class fees remain in Fee Management.', fields: [text('number','Invoice number'),ref('studentId','Student','student'),text('description','Description'),money('amountMinor','Gross amount',1),money('discountMinor','Scholarship / discount'),f('discountReason','Discount reason'),currency,date('dueDate','Due date (AD)')] },
+  receipts: { model: 'invoiceReceipt', title: 'Invoice Receipts', immutable: true, noDelete: true, description: 'Record verified payments, including partial payments. A reference can only be used once within this institution.', fields: [ref('invoiceId','Invoice','studentInvoice'),text('reference','Receipt / bank reference'),money('amountMinor','Amount received',1),choice('method','Method',['Cash','Bank Transfer']),date('paidDate','Payment date (AD)')] },
+};
+module.exports = { catalog };

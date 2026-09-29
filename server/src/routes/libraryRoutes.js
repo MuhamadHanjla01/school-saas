@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const { secureRouter, validateRequestReferences, requireRecord, ADMIN_ROLES, STAFF_ROLES, safeUserSelect, studentScope, classScope, noProfileId } = require('../middleware/routeSecurity');
+secureRouter(router, { model: 'book', readRoles: STAFF_ROLES });
 const prisma = require('../prismaClient');
 
 // Get all books
 router.get('/', async (req, res) => {
   try {
     const books = await prisma.book.findMany({
-      where: { schoolId: req.tenant.id },
+      where: { schoolId: req.schoolId },
       orderBy: { createdAt: 'desc' }
     });
     res.json(books);
@@ -26,7 +28,7 @@ router.post('/', async (req, res) => {
         title,
         author,
         category,
-        schoolId: req.tenant.id
+        schoolId: req.schoolId
       }
     });
     res.status(201).json(book);
@@ -41,7 +43,7 @@ router.put('/:id', async (req, res) => {
   try {
     const { status, issuedTo, dueDate } = req.body;
     const book = await prisma.book.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, schoolId: req.schoolId },
       data: { status, issuedTo, dueDate: dueDate ? new Date(dueDate) : null }
     });
     res.json(book);
@@ -54,7 +56,7 @@ router.put('/:id', async (req, res) => {
 // Delete book
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.book.delete({ where: { id: req.params.id } });
+    await prisma.book.delete({ where: { id: req.params.id, schoolId: req.schoolId } });
     res.json({ message: 'Book deleted' });
   } catch (error) {
     console.error(error);

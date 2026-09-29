@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Toast } from './AdminPage';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MyProfileView({ dark }) {
+  const { user } = useAuth();
   const [profile, setProfile] = useState({
     username: '',
     email: '',
@@ -15,20 +17,20 @@ export default function MyProfileView({ dark }) {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    // In a real app, we would fetch the specific logged-in user. 
-    // Here we will just fetch the first user or mock it.
     const fetchProfile = async () => {
       try {
-        const res = await axios.get('https://erpzo-backend.onrender.com/api/users');
-        if (res.data.users && res.data.users.length > 0) {
-          const u = res.data.users[0]; // mock current user
-          setProfile({
-            username: u.username || '',
-            email: u.email || '',
-            role: u.role || '',
-            phone: u.phone || '+1 555-0198',
-            bio: u.bio || 'Administrator at ERPzo Academy'
-          });
+        const res = await axios.get('/api/users');
+        if (res.data.users) {
+          const myUser = res.data.users.find(u => u.id === user?.id) || res.data.users[0];
+          if (myUser) {
+            setProfile({
+              username: myUser.name || myUser.email.split('@')[0] || '',
+              email: myUser.email || '',
+              role: myUser.role || '',
+              phone: myUser.phone || '+1 555-0198',
+              bio: myUser.bio || 'Administrator at ERPzo Academy'
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
@@ -37,7 +39,7 @@ export default function MyProfileView({ dark }) {
       }
     };
     fetchProfile();
-  }, []);
+  }, [user]);
 
   const handleSave = async (e) => {
     e.preventDefault();

@@ -1,3 +1,4 @@
+import '../app_config.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -7,7 +8,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:http/http.dart' as http;
 
 class UpdateService {
-  static const String updateJsonUrl = 'https://erpzo-backend.onrender.com/api/app-update/latest';
+  static const String updateJsonUrl = '${AppConfig.apiUrl}/api/app-update/latest';
 
   /// Returns true if an update dialog was shown, meaning the caller (like splash screen)
   /// should halt navigation if the update is forced.

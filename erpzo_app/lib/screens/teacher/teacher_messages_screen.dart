@@ -425,7 +425,7 @@ class _TeacherMessagesScreenState extends State<TeacherMessagesScreen> with Widg
 }
 
 class _NewMessageSheet extends StatefulWidget {
-  const _NewMessageSheet({super.key});
+  const _NewMessageSheet();
 
   @override
   State<_NewMessageSheet> createState() => _NewMessageSheetState();

@@ -9,7 +9,7 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
   
   const fetchSchools = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || ''}/api/superadmin/tenants/schools`, { withCredentials: true });
       setSchools(res.data);
     } catch (error) {
       console.error('Failed to fetch schools:', error);
@@ -37,7 +37,7 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
     setOpenDropdownId(null);
     if (action === 'suspend') {
       try {
-        await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${school.id}`, { status: 'Suspended' }, { withCredentials: true });
+        await axios.put(`${import.meta.env.VITE_API_URL || ''}/api/superadmin/tenants/schools/${school.id}`, { status: 'Suspended' }, { withCredentials: true });
         fetchSchools();
       } catch (error) {
         console.error(error);
@@ -45,7 +45,7 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
     } else if (action === 'delete') {
       if(window.confirm(`Are you sure you want to delete ${school.name}?`)) {
         try {
-          await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${school.id}`, { withCredentials: true });
+          await axios.delete(`${import.meta.env.VITE_API_URL || ''}/api/superadmin/tenants/schools/${school.id}`, { withCredentials: true });
           fetchSchools();
         } catch (error) {
           console.error(error);
@@ -59,7 +59,7 @@ export default function ManageSchoolsView({ dark, setShowOnboardModal, onViewSch
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/superadmin/tenants/schools/${editingSchool.id}`, editingSchool, { withCredentials: true });
+      await axios.put(`${import.meta.env.VITE_API_URL || ''}/api/superadmin/tenants/schools/${editingSchool.id}`, editingSchool, { withCredentials: true });
       fetchSchools();
       setEditingSchool(null);
     } catch (error) {

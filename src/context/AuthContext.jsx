@@ -1,122 +1,86 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
+import { configureSessionClient } from './sessionClient';
+import { dataCache } from '../hooks/useDataCache';
 
-// Global Axios defaults: timeout prevents the UI from hanging when backend is slow
-axios.defaults.timeout = 10_000; // 10 seconds
-
+const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+axios.defaults.baseURL = apiBase;
+axios.defaults.timeout = 15_000;
+const authApi = axios.create({ baseURL: apiBase, timeout: 15_000, withCredentials: true });
+const apiOrigin = new URL(apiBase || window.location.origin, window.location.origin).origin;
 const AuthContext = createContext();
-
 export const useAuth = () => useContext(AuthContext);
+
+function completeUser(user, school = user?.school) {
+  if (!user) throw new Error('Your account profile could not be loaded. Please sign in again.');
+  return { ...user, school, schoolId: user.schoolId || school?.id, schoolName: school?.name || '' };
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(null);
+  const [session, setSession] = useState(null);
+  const [startupError, setStartupError] = useState('');
 
-  // Configure global axios interceptor for requests to attach token
   useEffect(() => {
-    const requestInterceptor = axios.interceptors.request.use(
-      (config) => {
-        if (accessToken) {
-          config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    const responseInterceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-
-        // 503 = circuit breaker tripped on the server; don't retry, just propagate
-        if (error.response?.status === 503) {
-          return Promise.reject(error);
-        }
-
-        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login')) {
-          originalRequest._retry = true;
-          try {
-            // Attempt to refresh
-            const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/refresh`, {}, {
-              withCredentials: true
-            });
-            const { accessToken: newAccessToken } = res.data;
-            setAccessToken(newAccessToken);
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            return axios(originalRequest);
-          } catch (refreshError) {
-            // Refresh failed, logout
-            setUser(null);
-            setAccessToken(null);
+    let active = true;
+    dataCache.clear();
+    const client = configureSessionClient(axios, {
+      apiOrigin,
+      refreshRequest: async () => (await authApi.post('/api/auth/refresh', {})).data.accessToken,
+      onTokenChange: (token) => { if (active) setAccessToken(token); },
+      onExpired: () => { if (active) { dataCache.clear(); setUser(null); } },
+    });
+    setSession(client);
+    // Defer until after StrictMode's setup/cleanup probe, avoiding double token rotation.
+    Promise.resolve().then(async () => {
+      if (!active) return;
+      try {
+        await client.refresh();
+        const response = await axios.get('/api/auth/me');
+        if (active) setUser(completeUser(response.data.user));
+      } catch (error) {
+        if (active) {
+          setUser(null);
+          if (![401, 403].includes(error.response?.status)) {
+            setStartupError(error.response?.data?.error || 'Unable to connect to the school service. Please try again.');
           }
         }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.request.eject(requestInterceptor);
-      axios.interceptors.response.eject(responseInterceptor);
-    };
-  }, [accessToken]);
-
-  // Initial check
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/refresh`, {}, {
-          withCredentials: true
-        });
-        setAccessToken(res.data.accessToken);
-        const decoded = jwtDecode(res.data.accessToken);
-        setUser({ 
-          id: decoded.userId, 
-          role: decoded.role, 
-          schoolName: decoded.schoolName 
-        });
-      } catch (error) {
-        // Not logged in
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuth();
+      } finally { if (active) setLoading(false); }
+    });
+    return () => { active = false; client.dispose(); };
   }, []);
 
+  const reloadUser = async () => {
+    const response = await axios.get('/api/auth/me');
+    const nextUser = completeUser(response.data.user);
+    setUser(nextUser);
+    return nextUser;
+  };
   const login = async (email, password) => {
-    const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/login`, { email, password, clientType: 'web' }, {
-      withCredentials: true
-    });
-    setAccessToken(res.data.accessToken);
-    setUser({
-      ...res.data.user,
-      schoolName: res.data.school?.name
-    });
-    return res.data.user;
+    const response = await authApi.post('/api/auth/login', { email: email.trim(), password, clientType: 'web' });
+    dataCache.clear();
+    session.setToken(response.data.accessToken);
+    const nextUser = completeUser(response.data.user, response.data.school);
+    setUser(nextUser);
+    setStartupError('');
+    return nextUser;
   };
-
   const logout = async () => {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/logout`, {}, { withCredentials: true });
-    } catch (e) {}
+    dataCache.clear();
+    session.setToken(null);
     setUser(null);
-    setAccessToken(null);
+    try { await authApi.post('/api/auth/logout', {}); } catch { /* Local access is already cleared. */ }
   };
+  const forgotPassword = async (email) => (await authApi.post('/api/auth/forgot-password', { email: email.trim() })).data;
 
-  const forgotPassword = async (email) => {
-    const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/forgot-password`, { email });
-    return res.data;
-  };
+  if (loading) return <div role="status" className="flex items-center justify-center min-h-screen text-primary-container">Loading your school portal...</div>;
+  if (startupError) return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
+    <p>{startupError}</p><button className="rounded-xl bg-primary p-3 text-white" onClick={() => window.location.reload()}>Try again</button>
+  </div>;
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-primary-container">Loading...</div>;
-
-  return (
-    <AuthContext.Provider value={{ user, login, logout, forgotPassword, loading, accessToken }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, logout, forgotPassword, reloadUser, loading, accessToken }}>
+    {children}
+  </AuthContext.Provider>;
 };
